@@ -55,12 +55,10 @@ RegistrationHelper<TComputeType, VImageDimension>
   m_LowerQuantile( 0.0 ),
   m_UpperQuantile( 1.0 ),
   m_LogStream( &std::cout ),
-  m_ApplyLinearTransformsToFixedImageHeader( true ),
   m_PrintSimilarityMeasureInterval( 0 ),
   m_WriteIntervalVolumes( 0 ),
   m_InitializeTransformsPerStage( false ),
-  m_AllPreviousTransformsAreLinear( true ),
-  m_CompositeLinearTransformForFixedImageHeader( nullptr )
+  m_AllPreviousTransformsAreLinear( true )
 {
   typedef itk::LinearInterpolateImageFunction<ImageType, RealType> LinearInterpolatorType;
   typename LinearInterpolatorType::Pointer linearInterpolator = LinearInterpolatorType::New();
@@ -581,13 +579,13 @@ typename RegistrationHelper<TComputeType, VImageDimension>::ShrinkFactorsPerDime
 RegistrationHelper<TComputeType, VImageDimension>
 ::CalculateShrinkFactorsPerDimension( unsigned int factor, ImageSpacingType spacing )
 {
-  typedef RealType                        SpacingValueType;
+  using SpacingValueType = typename ImageSpacingType::ComponentType;
 
   SpacingValueType minSpacing = spacing[0];
   unsigned int minIndex = 0;
   for( unsigned int n = 1; n < VImageDimension; n++ )
     {
-    if( minSpacing > spacing[n] )
+    if( minSpacing > static_cast<SpacingValueType>( spacing[n] ) )
       {
       minSpacing = spacing[n];
       minIndex = n;
@@ -605,15 +603,16 @@ RegistrationHelper<TComputeType, VImageDimension>
     {
     if( shrinkFactorsPerDimension[n] == 0 )
       {
-      SpacingValueType newMinSpacing = spacing[n] * static_cast<SpacingValueType>( factor );
-      RealType minDifferenceFromMinSpacing = itk::Math::abs ( newMinSpacing - newSpacing[minIndex] );
+      SpacingValueType newMinSpacing = static_cast<SpacingValueType>( spacing[n] ) *
+        static_cast<SpacingValueType>( factor );
+      RealType minDifferenceFromMinSpacing = static_cast<RealType>( std::fabs( newMinSpacing - newSpacing[minIndex] ) );
       unsigned int minFactor = factor;
       for( unsigned int f = factor - 1; f > 0; f-- )
         {
-        newMinSpacing = spacing[n] * static_cast<SpacingValueType>( f );
+        newMinSpacing = static_cast<SpacingValueType>( spacing[n] ) * static_cast<SpacingValueType>( f );
 
         // We use <= such that the smaller factor is preferred if distances are the same
-        if( itk::Math::abs ( newMinSpacing - newSpacing[minIndex] ) <= minDifferenceFromMinSpacing )
+        if( static_cast<RealType>( std::fabs( newMinSpacing - newSpacing[minIndex] ) ) <= minDifferenceFromMinSpacing )
           {
           minDifferenceFromMinSpacing = itk::Math::abs ( newMinSpacing - newSpacing[minIndex] );
           minFactor = f;
@@ -808,10 +807,6 @@ RegistrationHelper<TComputeType, VImageDimension>
     {
     this->m_CompositeTransform = CompositeTransformType::New();
     }
-  if( this->m_CompositeLinearTransformForFixedImageHeader.IsNull() )
-    {
-    this->m_CompositeLinearTransformForFixedImageHeader = CompositeTransformType::New();
-    }
   if( this->m_FixedInitialTransform.IsNull() )
     {
     this->m_FixedInitialTransform = CompositeTransformType::New();
@@ -853,8 +848,8 @@ RegistrationHelper<TComputeType, VImageDimension>
     const unsigned int numberOfLevels = currentStageIterations.size();
     this->Logger() << "  number of levels = " << numberOfLevels << std::endl;
 
-    unsigned int fixedMaskIndex = -1;
-    unsigned int movingMaskIndex = -1;
+    unsigned int fixedMaskIndex = itk::NumericTraits<unsigned int>::max();
+    unsigned int movingMaskIndex = itk::NumericTraits<unsigned int>::max();
     bool useFixedImageMaskForThisStage = false;
     bool useMovingImageMaskForThisStage = false;
 
@@ -951,7 +946,7 @@ RegistrationHelper<TComputeType, VImageDimension>
                          << stageMetricList[currentMetricNumber].m_Weighting << ")" << std::endl;
           typedef itk::MattesMutualInformationImageToImageMetricv4<ImageType, ImageType, ImageType, TComputeType> MutualInformationMetricType;
           typename MutualInformationMetricType::Pointer mutualInformationMetric = MutualInformationMetricType::New();
-          mutualInformationMetric = mutualInformationMetric;
+          // mutualInformationMetric = mutualInformationMetric;
           mutualInformationMetric->SetNumberOfHistogramBins( binOption );
           mutualInformationMetric->SetUseMovingImageGradientFilter( gradientfilter );
           mutualInformationMetric->SetUseFixedImageGradientFilter( gradientfilter );
@@ -969,7 +964,7 @@ RegistrationHelper<TComputeType, VImageDimension>
           typedef itk::JointHistogramMutualInformationImageToImageMetricv4<ImageType, ImageType, ImageType,
                                                                            TComputeType> MutualInformationMetricType;
           typename MutualInformationMetricType::Pointer mutualInformationMetric = MutualInformationMetricType::New();
-          mutualInformationMetric = mutualInformationMetric;
+          //mutualInformationMetric = mutualInformationMetric;
           mutualInformationMetric->SetNumberOfHistogramBins( binOption );
           mutualInformationMetric->SetUseMovingImageGradientFilter( gradientfilter );
           mutualInformationMetric->SetUseFixedImageGradientFilter( gradientfilter );
@@ -986,7 +981,7 @@ RegistrationHelper<TComputeType, VImageDimension>
 
           typedef itk::MeanSquaresImageToImageMetricv4<ImageType, ImageType, ImageType, TComputeType> MeanSquaresMetricType;
           typename MeanSquaresMetricType::Pointer meanSquaresMetric = MeanSquaresMetricType::New();
-          meanSquaresMetric = meanSquaresMetric;
+          //meanSquaresMetric = meanSquaresMetric;
 
           imageMetric = meanSquaresMetric;
           }
@@ -1059,7 +1054,7 @@ RegistrationHelper<TComputeType, VImageDimension>
 
           msqMetric->SetIntensityDistanceSigma( stageMetricList[currentMetricNumber].m_IntensityDistanceSigma );
           msqMetric->SetEuclideanDistanceSigma( stageMetricList[currentMetricNumber].m_EuclideanDistanceSigma );
-          if( msqMetric->GetEuclideanDistanceSigma() <= 0.0 )
+          if( msqMetric->GetEuclideanDistanceSigma() <= itk::NumericTraits<RealType>::ZeroValue() )
             {
             msqMetric->EstimateEuclideanDistanceSigmaAutomaticallyOn();
             }
@@ -1067,7 +1062,7 @@ RegistrationHelper<TComputeType, VImageDimension>
             {
             msqMetric->EstimateEuclideanDistanceSigmaAutomaticallyOff();
             }
-          if( msqMetric->GetIntensityDistanceSigma() <= 0.0 )
+          if( msqMetric->GetIntensityDistanceSigma() <= itk::NumericTraits<RealType>::ZeroValue() )
             {
             msqMetric->EstimateIntensityDistanceSigmaAutomaticallyOn();
             }
@@ -1125,21 +1120,6 @@ RegistrationHelper<TComputeType, VImageDimension>
                                         preprocessFixedImage.GetPointer() );
           }
         preprocessedMovingImagesPerStage.push_back( preprocessMovingImage.GetPointer() );
-
-        if( this->m_ApplyLinearTransformsToFixedImageHeader )
-          {
-          this->ApplyCompositeLinearTransformToImageHeader( this->m_CompositeLinearTransformForFixedImageHeader,
-                                                            dynamic_cast<ImageBaseType *>( preprocessFixedImage.
-                                                                                           GetPointer() ), false );
-
-          if( useFixedImageMaskForThisStage )
-            {
-            this->ApplyCompositeLinearTransformToImageHeader( this->m_CompositeLinearTransformForFixedImageHeader,
-                                                              dynamic_cast<ImageBaseType *>( const_cast<MaskImageType *>(
-                                                                                               this->m_FixedImageMasks[fixedMaskIndex]->
-                                                                                               GetImage() ) ), false );
-            }
-          }
 
         this->Logger() << outputPreprocessingString << std::flush;
 
@@ -1379,7 +1359,7 @@ RegistrationHelper<TComputeType, VImageDimension>
       }
     if( this->m_WriteIntervalVolumes != 0 )
       {
-      optimizerObserver->SetWriteInterationsOutputsInIntervals( this->m_WriteIntervalVolumes );
+      optimizerObserver->SetWriteIterationsOutputsInIntervals( this->m_WriteIntervalVolumes );
       optimizerObserver->SetCurrentStageNumber( currentStageNumber );
       }
 
@@ -1415,7 +1395,7 @@ RegistrationHelper<TComputeType, VImageDimension>
       }
     if( this->m_WriteIntervalVolumes != 0 )
       {
-      optimizerObserver2->SetWriteInterationsOutputsInIntervals( this->m_WriteIntervalVolumes );
+      optimizerObserver2->SetWriteIterationsOutputsInIntervals( this->m_WriteIntervalVolumes );
       optimizerObserver2->SetCurrentStageNumber( currentStageNumber );
       }
 
@@ -1828,7 +1808,7 @@ RegistrationHelper<TComputeType, VImageDimension>
 	  {
 	  displacementFieldRegistration->MetricSamplingReinitializeSeed( this->m_RegistrationRandomSeed );
 	  }
-	
+
         if( this->m_RestrictDeformationOptimizerWeights.size() > currentStageNumber )
           {
           if( this->m_RestrictDeformationOptimizerWeights[currentStageNumber].size() == VImageDimension )
@@ -1989,7 +1969,7 @@ RegistrationHelper<TComputeType, VImageDimension>
           }
         if( this->m_WriteIntervalVolumes != 0 )
           {
-          displacementFieldRegistrationObserver2->SetWriteInterationsOutputsInIntervals( this->m_WriteIntervalVolumes );
+          displacementFieldRegistrationObserver2->SetWriteIterationsOutputsInIntervals( this->m_WriteIntervalVolumes );
           displacementFieldRegistrationObserver2->SetCurrentStageNumber( currentStageNumber );
           }
         displacementFieldRegistration->AddObserver( itk::InitializeEvent(), displacementFieldRegistrationObserver2 );
@@ -3199,7 +3179,7 @@ RegistrationHelper<TComputeType, VImageDimension>
         typename BSplineTransformType::MeshSizeType meshSize;
         for( unsigned int d = 0; d < VImageDimension; d++ )
           {
-          physicalDimensions[d] = preprocessedFixedImagesPerStage[0]->GetSpacing()[d]
+          physicalDimensions[d] = static_cast<RealType>( preprocessedFixedImagesPerStage[0]->GetSpacing()[d] )
             * static_cast<RealType>( preprocessedFixedImagesPerStage[0]->GetLargestPossibleRegion().GetSize()[d] - 1 );
           meshSize[d] = size[d];
           }
@@ -3278,13 +3258,6 @@ RegistrationHelper<TComputeType, VImageDimension>
                    << std::endl;
     }
 
-  if( this->m_ApplyLinearTransformsToFixedImageHeader &&
-      this->m_CompositeLinearTransformForFixedImageHeader->GetNumberOfTransforms() > 0 )
-    {
-    this->m_CompositeTransform->PrependTransform( this->m_CompositeLinearTransformForFixedImageHeader );
-    this->m_CompositeTransform->FlattenTransformQueue();
-    }
-
   totalTimer.Stop();
   this->Logger() << std::endl << "Total elapsed time: " << totalTimer.GetMean() << std::endl;
 
@@ -3331,30 +3304,17 @@ RegistrationHelper<TComputeType, VImageDimension>
     {
     compToAdd = compXfrm->Clone();
 
-    if( this->m_ApplyLinearTransformsToFixedImageHeader && compXfrm->IsLinear() )
-      {
-      this->m_CompositeLinearTransformForFixedImageHeader = compToAdd;
-      }
-    else
-      {
-      this->m_FixedInitialTransform = compToAdd;
-      this->m_AllPreviousTransformsAreLinear = false;
-      }
+    this->m_FixedInitialTransform = compToAdd;
+    this->m_AllPreviousTransformsAreLinear = false;
     }
   else
     {
     compToAdd = CompositeTransformType::New();
     typename TransformType::Pointer xfrm = initialTransform->Clone();
     compToAdd->AddTransform( xfrm );
-    if( this->m_ApplyLinearTransformsToFixedImageHeader && initialTransform->IsLinear() )
-      {
-      this->m_CompositeLinearTransformForFixedImageHeader = compToAdd;
-      }
-    else
-      {
-      this->m_FixedInitialTransform = compToAdd;
-      this->m_AllPreviousTransformsAreLinear = false;
-      }
+
+    this->m_FixedInitialTransform = compToAdd;
+    this->m_AllPreviousTransformsAreLinear = false;
     }
 }
 
@@ -3377,10 +3337,10 @@ RegistrationHelper<TComputeType, VImageDimension>
     // transforms for a SyN registration.
     //
     unsigned int numTransforms = compToRestore->GetNumberOfTransforms();
-    if( (compToRestore->GetNthTransform( numTransforms-1 )->GetTransformCategory() == TransformType::DisplacementField)
-       && (compToRestore->GetNthTransform( numTransforms-2 )->GetTransformCategory() == TransformType::DisplacementField)
-       && (compToRestore->GetNthTransform( numTransforms-3 )->GetTransformCategory() == TransformType::DisplacementField)
-       && (compToRestore->GetNthTransform( numTransforms-4 )->GetTransformCategory() == TransformType::DisplacementField) )
+    if( (compToRestore->GetNthTransform( numTransforms-1 )->GetTransformCategory() == TransformType::TransformCategoryEnum::DisplacementField)
+       && (compToRestore->GetNthTransform( numTransforms-2 )->GetTransformCategory() == TransformType::TransformCategoryEnum::DisplacementField)
+       && (compToRestore->GetNthTransform( numTransforms-3 )->GetTransformCategory() == TransformType::TransformCategoryEnum::DisplacementField)
+       && (compToRestore->GetNthTransform( numTransforms-4 )->GetTransformCategory() == TransformType::TransformCategoryEnum::DisplacementField) )
       {
       typename DisplacementFieldTransformType::Pointer fixedToMiddleForwardTx =
         dynamic_cast<DisplacementFieldTransformType *>( compToRestore->GetNthTransform( numTransforms-4 ).GetPointer() );
@@ -3472,7 +3432,8 @@ RegistrationHelper<TComputeType, VImageDimension>
   for( unsigned int d = 0; d < ImageDimension; d++ )
     {
     RealType domain = static_cast<RealType>(
-      inputImage->GetLargestPossibleRegion().GetSize()[d] - 1 ) * inputImage->GetSpacing()[d];
+      inputImage->GetLargestPossibleRegion().GetSize()[d] - 1 ) *
+      static_cast<RealType>( inputImage->GetSpacing()[d] );
     meshSize.push_back( static_cast<unsigned int>( std::ceil( domain / knotSpacing ) ) );
 //     unsigned long extraPadding = static_cast<unsigned long>(
 //       ( numberOfSpans * splineDistance - domain ) / inputImage->GetSpacing()[d] + 0.5 );
@@ -3504,7 +3465,7 @@ RegistrationHelper<TComputeType, VImageDimension>
     {
     typename TransformType::Pointer transform = compositeTransform->GetNthTransform( n-1 );
     typename MatrixOffsetTransformBaseType::ConstPointer matrixOffsetTransform =
-      dynamic_cast<MatrixOffsetTransformBaseType * const>( transform.GetPointer() );
+      dynamic_cast<MatrixOffsetTransformBaseType *>( transform.GetPointer() );
     if( matrixOffsetTransform.IsNotNull() )
      {
      totalTransform->SetCenter( matrixOffsetTransform->GetCenter() );
@@ -3529,7 +3490,7 @@ RegistrationHelper<TComputeType, VImageDimension>
     else
       {
       typename MatrixOffsetTransformBaseType::ConstPointer matrixOffsetTransform =
-        dynamic_cast<MatrixOffsetTransformBaseType * const>( transform.GetPointer() );
+        dynamic_cast<MatrixOffsetTransformBaseType *>( transform.GetPointer() );
       nthTransform->SetCenter( matrixOffsetTransform->GetCenter() );
       nthTransform->SetMatrix( matrixOffsetTransform->GetMatrix() );
       nthTransform->SetTranslation( matrixOffsetTransform->GetTranslation() );
@@ -3546,7 +3507,7 @@ RegistrationHelper<TComputeType, VImageDimension>
 {
   typename CompositeTransformType::Pointer combinedCompositeTransform = CompositeTransformType::New();
 
-  if( compositeTransform->GetTransformCategory() != TransformType::DisplacementField  )
+  if( compositeTransform->GetTransformCategory() != TransformType::TransformCategoryEnum::DisplacementField  )
     {
     itkExceptionMacro( "The composite transform is not composed strictly of displacement fields." );
     }
@@ -3645,7 +3606,7 @@ RegistrationHelper<TComputeType, VImageDimension>
     collapsedCompositeTransform->AddTransform( this->CollapseLinearTransforms( compositeTransform ) );
     return collapsedCompositeTransform;
     }
-  else if( compositeTransform->GetTransformCategory() == TransformType::DisplacementField )
+  else if( compositeTransform->GetTransformCategory() == TransformType::TransformCategoryEnum::DisplacementField )
     {
     collapsedCompositeTransform->AddTransform( this->CollapseDisplacementFieldTransforms( compositeTransform ) );
     collapsedCompositeTransform->FlattenTransformQueue();
@@ -3653,13 +3614,13 @@ RegistrationHelper<TComputeType, VImageDimension>
     }
 
   // Find the first linear or displacement field transform
-  typename TransformType::TransformCategoryType currentTransformCategory = TransformType::UnknownTransformCategory;
+  typename TransformType::TransformCategoryEnum currentTransformCategory = TransformType::TransformCategoryEnum::UnknownTransformCategory;
   unsigned int startIndex = 0;
   for( unsigned int n = 0; n < compositeTransform->GetNumberOfTransforms(); n++ )
     {
-    typename TransformType::TransformCategoryType transformCategory =
+    typename TransformType::TransformCategoryEnum transformCategory =
       compositeTransform->GetNthTransform( n )->GetTransformCategory();
-    if( transformCategory == TransformType::Linear || transformCategory == TransformType::DisplacementField )
+    if( transformCategory == TransformType::TransformCategoryEnum::Linear || transformCategory == TransformType::TransformCategoryEnum::DisplacementField )
       {
       currentTransformCategory = transformCategory;
       startIndex = n;
@@ -3673,24 +3634,24 @@ RegistrationHelper<TComputeType, VImageDimension>
 
   // If a linear or displacement field transform is found then we can break down the
   // composite transform into neighboring sets of like transform types.
-  if( currentTransformCategory != TransformType::UnknownTransformCategory )
+  if( currentTransformCategory != TransformType::TransformCategoryEnum::UnknownTransformCategory )
     {
     CompositeTransformPointer currentCompositeTransform = CompositeTransformType::New();
     currentCompositeTransform->AddTransform( compositeTransform->GetNthTransform( startIndex ) );
     for( unsigned int n = startIndex + 1; n < compositeTransform->GetNumberOfTransforms(); n++ )
       {
-      typename TransformType::TransformCategoryType transformCategory =
+      typename TransformType::TransformCategoryEnum transformCategory =
         compositeTransform->GetNthTransform( n )->GetTransformCategory();
       if( transformCategory == currentTransformCategory )
         {
         currentCompositeTransform->AddTransform( compositeTransform->GetNthTransform( n ) );
         if( n == compositeTransform->GetNumberOfTransforms() - 1 )
           {
-          if( currentTransformCategory == TransformType::Linear )
+          if( currentTransformCategory == TransformType::TransformCategoryEnum::Linear )
             {
             collapsedCompositeTransform->AddTransform( this->CollapseLinearTransforms( currentCompositeTransform ) );
             }
-          else if( currentTransformCategory == TransformType::DisplacementField )
+          else if( currentTransformCategory == TransformType::TransformCategoryEnum::DisplacementField )
             {
             collapsedCompositeTransform->AddTransform( this->CollapseDisplacementFieldTransforms(
                                                          currentCompositeTransform ) );
@@ -3699,12 +3660,12 @@ RegistrationHelper<TComputeType, VImageDimension>
         }
       else
         {
-        if( currentTransformCategory == TransformType::Linear )
+        if( currentTransformCategory == TransformType::TransformCategoryEnum::Linear )
           {
           collapsedCompositeTransform->AddTransform( this->CollapseLinearTransforms( currentCompositeTransform ) );
           currentCompositeTransform->ClearTransformQueue();
           }
-        else if( currentTransformCategory == TransformType::DisplacementField )
+        else if( currentTransformCategory == TransformType::TransformCategoryEnum::DisplacementField )
           {
           collapsedCompositeTransform->AddTransform( this->CollapseDisplacementFieldTransforms(
                                                        currentCompositeTransform ) );
@@ -3712,7 +3673,7 @@ RegistrationHelper<TComputeType, VImageDimension>
           }
         currentTransformCategory = transformCategory;
 
-        if( ( transformCategory == TransformType::Linear || transformCategory == TransformType::DisplacementField ) &&
+        if( ( transformCategory == TransformType::TransformCategoryEnum::Linear || transformCategory == TransformType::TransformCategoryEnum::DisplacementField ) &&
             n < compositeTransform->GetNumberOfTransforms() - 1 )
           {
           currentCompositeTransform->AddTransform( compositeTransform->GetNthTransform( n ) );

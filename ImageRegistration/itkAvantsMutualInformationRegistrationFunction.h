@@ -33,7 +33,7 @@
 #include "itkTransform.h"
 #include "itkInterpolateImageFunction.h"
 #include "itkSingleValuedCostFunction.h"
-#include "itkExceptionObject.h"
+#include "itkMacro.h"
 #include "itkGradientRecursiveGaussianImageFilter.h"
 #include "itkSpatialObject.h"
 #include "itkConstNeighborhoodIterator.h"
@@ -118,7 +118,7 @@ namespace itk
  * \ingroup ThreadUnSafe
  */
 template <typename TFixedImage, typename TMovingImage, typename TDisplacementField>
-class AvantsMutualInformationRegistrationFunction :
+class AvantsMutualInformationRegistrationFunction final :
   public         AvantsPDEDeformableRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
 {
 public:
@@ -562,9 +562,9 @@ public:
   {
     unsigned int movingImageParzenWindowIndex  =
       static_cast<unsigned int>( this->m_Padding
-                                 + (unsigned int)( windowTerm
-                                                   * (float)(this->m_NumberOfHistogramBins - 1
-                                                             - this->m_Padding) + 0.5 ) );
+                                 + static_cast<unsigned int>( static_cast<float>( windowTerm )
+                                     * static_cast<float>(this->m_NumberOfHistogramBins - 1
+                                       - this->m_Padding) + 0.5f ) );
 
     // Make sure the extreme values are in valid bins
     if( movingImageParzenWindowIndex < this->m_Padding )
@@ -581,7 +581,7 @@ public:
 
   double FitContIndexInBins( double windowTerm )
   {
-    return (double) this->m_Padding + windowTerm * (float)(this->m_NumberOfHistogramBins - this->m_Padding);
+    return static_cast<double>( this->m_Padding ) + windowTerm * static_cast<double>(this->m_NumberOfHistogramBins - this->m_Padding);
   }
 
   VectorType ComputeUpdate(const NeighborhoodType & neighborhood,

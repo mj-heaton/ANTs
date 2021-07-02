@@ -90,6 +90,18 @@ should be invoked from that directory.
 
 Optional arguments:
 
+     -a   image statistic used to summarize images (default 1)
+          0 = mean
+          1 = mean of normalized intensities
+          2 = median
+
+          Normalization here means dividing each image by its mean intensity.
+
+     -A   sharpening applied to template at each iteration (default 1)
+          0 = none
+          1 = Laplacian
+          2 = Unsharp mask 
+
      -c:  Control for parallel computation (default 1) -- 0 == run serially,  1 == SGE qsub,
           2 == use PEXEC (localhost), 3 == Apple XGrid, 4 == PBS qsub, 5 == SLURM
 
@@ -188,7 +200,9 @@ function reportMappingParameters {
  Template population:               $IMAGESETVARIABLE
  Number of Modalities:              $NUMBEROFMODALITIES
  Modality weights:                  $MODALITYWEIGHTSTRING
- Shape update with full affine:     $AFFINE_UPDATE_FULL
+ Image statistic:                   $STATSMETHOD
+ Sharpening method:                 $SHARPENMETHOD
+ Shape update full affine:          $AFFINE_UPDATE_FULL
 --------------------------------------------------------------------------------------
 REPORTMAPPINGPARAMETERS
 }
@@ -203,7 +217,9 @@ function shapeupdatetotemplate() {
     templatename=$3
     outputname=$4
     gradientstep=-$5
-    whichtemplate=$6
+    summarizemethod=$6
+    sharpenmethod=$7
+    whichtemplate=$8
 
 # debug only
 # echo $dim
@@ -219,10 +235,44 @@ function shapeupdatetotemplate() {
     echo
     echo "--------------------------------------------------------------------------------------"
     echo " shapeupdatetotemplate---voxel-wise averaging of the warped images to the current template"
-    echo "   ${ANTSPATH}/AverageImages $dim ${template} 1 ${templatename}${whichtemplate}*WarpedToTemplate.nii.gz    "
     echo "--------------------------------------------------------------------------------------"
-    ${ANTSPATH}/AverageImages $dim ${template} 1 ${templatename}${whichtemplate}*WarpedToTemplate.nii.gz
 
+    case $summarizemethod in
+    0) #mean
+      ${ANTSPATH}/AverageImages $dim ${template} 0 ${templatename}${whichtemplate}*WarpedToTemplate.nii.gz  
+      ;;
+    1) #mean of normalized images
+      ${ANTSPATH}/AverageImages $dim ${template} 2 ${templatename}${whichtemplate}*WarpedToTemplate.nii.gz
+      ;;
+    2) #median
+      local image
+      for image in ${templatename}${whichtemplate}*WarpedToTemplate.nii.gz;
+        do
+          echo $image >> ${templatename}${whichtemplate}_list.txt
+        done
+      ${ANTSPATH}/ImageSetStatistics $dim ${templatename}${whichtemplate}_list.txt ${template} 0
+      rm ${templatename}${whichtemplate}_list.txt
+      ;;
+  esac
+
+    echo "--------------------------------------------------------------------------------------"
+    echo " shapeupdatetotemplate---sharpening of the new template"
+    echo "--------------------------------------------------------------------------------------"
+
+    case $sharpenmethod in 
+    0)
+      echo "Sharpening method none"
+      ;;
+    1)
+      echo "Laplacian sharpening"
+      ${ANTSPATH}/ImageMath $dim $template Sharpen $template 
+      ;;
+    2)
+      echo "Unsharp mask sharpening"
+      ${ANTSPATH}/ImageMath $dim $template UnsharpMask $template 0.5 1 0 0
+      ;;
+  esac
+    
     if [[ $whichtemplate -eq 0 ]] ;
       then
         echo
@@ -370,6 +420,10 @@ BACKUP_EACH_ITERATION=0
 
 AFFINE_UPDATE_FULL=1
 
+# Methods for averaging warped images and sharpening next template
+STATSMETHOD=1
+SHARPENMETHOD=1
+
 ##Getting system info from linux can be done with these variables.
 # RAM=`cat /proc/meminfo | sed -n -e '/MemTotal/p' | awk '{ printf "%s %s\n", $2, $3 ; }' | cut -d " " -f 1`
 # RAMfree=`cat /proc/meminfo | sed -n -e '/MemFree/p' | awk '{ printf "%s %s\n", $2, $3 ; }' | cut -d " " -f 1`
@@ -390,12 +444,18 @@ if [[ "$1" == "-h" ]];
 fi
 
 # reading command line arguments
-while getopts "b:c:d:g:h:i:j:k:m:n:o:p:s:r:t:w:x:y:z:" OPT
+while getopts "A:a:b:c:d:g:h:i:j:k:m:n:o:p:s:r:t:w:x:y:z:" OPT
   do
   case $OPT in
       h) #help
    echo "$USAGE"
    exit 0
+   ;;
+      A) # Sharpening method
+      SHARPENMETHOD=$OPTARG 
+   ;;
+      a) # summarizing statistic
+      STATSMETHOD=$OPTARG
    ;;
       b) #backup each iteration (default = 0)
    BACKUP_EACH_ITERATION=$OPTARG
@@ -557,6 +617,18 @@ IMAGESETVARIABLE=$*
 NINFILES=$(($nargs - $shiftsize))
 IMAGESETARRAY=()
 
+if [[ $STATSMETHOD -lt 0 ]] || [[ $STATSMETHOD -gt 2 ]];
+  then
+  echo "Invalid stats type: using normalized mean (1)"
+  STATSMETHOD=1
+fi
+
+if [[ $SHARPENMETHOD -lt 0 ]] || [[ $SHARPENMETHOD -gt 2 ]];
+  then
+  echo "Invalid sharpening method: using Laplacian (1)"
+  SHARPENMETHOD=1
+fi
+
 AVERAGE_AFFINE_PROGRAM="AverageAffineTransform"
 
 if [[ $AFFINE_UPDATE_FULL -eq 0 ]];
@@ -599,7 +671,7 @@ if [[ ${NINFILES} -eq 0 ]];
             done
          done < $IMAGESFILE
     else
-        range=`${ANTSPATH}/ImageMath $TDIM abs nvols ${IMAGESETVARIABLE} | tail -1 | cut -d "," -f 4 | cut -d " " -f 2 | cut -d "]" -f 1 `
+        range=`${ANTSPATH}/ImageMath $TDIM abs nvols ${IMAGESETVARIABLE} | tail -1 | cut -d "," -f 4 | cut -d " " -f 2 | cut -d " ]" -f 1 `
         if [[ ${range} -eq 1 && ${TDIM} -ne 4 ]];
             then
             echo "Please provide at least 2 filenames for the template."
@@ -638,7 +710,7 @@ if [[ ${NINFILES} -eq 0 ]];
              # if there are more than 32 volumes in the time-series (in case they are smaller
 
              nfmribins=16
-            if [[ ${range} -gt 31  ]];
+            if [[ ${range} -gt 31 ]];
                 then
                 BINSIZE=$((${range} / ${nfmribins}))
                 j=1 # initialize counter j
@@ -680,7 +752,7 @@ if [[ ${NINFILES} -eq 0 ]];
                     let j++
                 done
             fi
-        elif [[ ${range} -gt ${nfmribins} && ${range} -lt 32  ]];
+        elif [[ ${range} -gt ${nfmribins} && ${range} -lt 32 ]];
             then
             for ((i = 0; i < ${nfmribins} ; i++))
                 do
@@ -744,8 +816,13 @@ for (( i = 0; i < $NUMBEROFMODALITIES; i++ ))
     do
     setCurrentImageSet $i
 
-    if [[ -s ${REGTEMPLATES[$i]} ]];
+    if [[ -n "${REGTEMPLATES[$i]}" ]];
       then
+        if [[ ! -r "${REGTEMPLATES[$i]}" ]]; 
+          then
+            echo "Initial template {REGTEMPLATES[$i]} cannot be read"
+            exit 1
+          fi
         echo
         echo "--------------------------------------------------------------------------------------"
         echo " Initial template $i found.  This will be used for guiding the registration. use : ${REGTEMPLATES[$i]} and ${TEMPLATES[$i]} "
@@ -758,7 +835,8 @@ for (( i = 0; i < $NUMBEROFMODALITIES; i++ ))
         echo " Creating template ${TEMPLATES[$i]} from a population average image from the inputs."
         echo "   ${CURRENTIMAGESET[@]}"
         echo "--------------------------------------------------------------------------------------"
-        ${ANTSPATH}/AverageImages $DIM ${TEMPLATES[$i]} 1 ${CURRENTIMAGESET[@]}
+        # Normalize but don't sharpen at this stage
+        ${ANTSPATH}/AverageImages $DIM ${TEMPLATES[$i]} 2 ${CURRENTIMAGESET[@]}
     fi
 
     if [[ ! -s ${TEMPLATES[$i]} ]];
@@ -792,7 +870,7 @@ if [[ "$RIGID" -eq 1 ]];
             do
             k=0
             let k=$i+$j
-            IMAGEMETRICSET="$IMAGEMETRICSET -m MI[${TEMPLATES[$j]},${IMAGESETARRAY[$k]},${MODALITYWEIGHTS[$j]},32]"
+            IMAGEMETRICSET="$IMAGEMETRICSET -m MI[ ${TEMPLATES[$j]},${IMAGESETARRAY[$k]},${MODALITYWEIGHTS[$j]},32 ]"
         done
 
         qscript="${outdir}/job_${count}_qsub.sh"
@@ -955,9 +1033,10 @@ if [[ "$RIGID" -eq 1 ]];
             IMAGERIGIDSET[${#IMAGERIGIDSET[@]}]=$RIGID
         done
         echo
-        echo  "${ANTSPATH}/AverageImages $DIM ${TEMPLATES[$j]} 1 ${IMAGERIGIDSET[@]}"
-
-    ${ANTSPATH}/AverageImages $DIM ${TEMPLATES[$j]} 1 ${IMAGERIGIDSET[@]}
+        echo  "${ANTSPATH}/AverageImages $DIM ${TEMPLATES[$j]} 2 ${IMAGERIGIDSET[@]}"
+    
+    # Don't sharpen after rigid alignment
+    ${ANTSPATH}/AverageImages $DIM ${TEMPLATES[$j]} 2 ${IMAGERIGIDSET[@]}
     done
 
     # cleanup and save output in seperate folder
@@ -970,7 +1049,7 @@ if [[ "$RIGID" -eq 1 ]];
         echo "--------------------------------------------------------------------------------------"
 
         mkdir ${outdir}/rigid
-        mv ${outdir}/rigid*.nii.gz ${outdir}/*GenericAffine.mat ${outdir}/rigid/
+        mv ${outdir}/rigid*.nii.gz ${outdir}/*Affine.txt ${outdir}/*GenericAffine.mat ${outdir}/rigid/
         # backup logs
         if [[ $DOQSUB -eq 1 ]];
           then
@@ -1027,59 +1106,59 @@ REGULARIZATION=''
 if [[ "${TRANSFORMATIONTYPE}" == "EL" ]];
     then
     # Mapping Parameters
-    TRANSFORMATION=Elast[1]
-    REGULARIZATION=Gauss[3,0.5]
-    # Gauss[3,x] is usually the best option.    x is usually 0 for SyN --- if you want to reduce flexibility/increase mapping smoothness, the set x > 0.
+    TRANSFORMATION="Elast[ 1 ]"
+    REGULARIZATION="Gauss[ 3,0.5 ]"
+    # Gauss[3,x ] is usually the best option.    x is usually 0 for SyN --- if you want to reduce flexibility/increase mapping smoothness, the set x > 0.
     # We did a large scale evaluation of SyN gradient parameters in normal brains and found 0.25 => 0.5 to perform best when
-    # combined with default Gauss[3,0] regularization.    You would increase the gradient step in some cases, though, to make
+    # combined with default Gauss[3,0 ] regularization.    You would increase the gradient step in some cases, though, to make
     # the registration converge faster --- though oscillations occur if the step is too high and other instability might happen too.
-elif [[ "${TRANSFORMATIONTYPE}" == "S2"  ]];
+elif [[ "${TRANSFORMATIONTYPE}" == "S2" ]];
     then
-    # Mapping Parameters for the LDDMM style SyN --- the params are SyN[GradientStepLength,NTimeDiscretizationPoints,IntegrationTimeStep]
+    # Mapping Parameters for the LDDMM style SyN --- the params are SyN[ GradientStepLength,NTimeDiscretizationPoints,IntegrationTimeStep]
     # increasing IntegrationTimeStep increases accuracy in the diffeomorphism integration and takes more computation time.
     # NTimeDiscretizationPoints is set to 2 here
-    TRANSFORMATION=SyN[1,2,0.05]
-    REGULARIZATION=Gauss[3,0.]
-elif [[ "${TRANSFORMATIONTYPE}" == "SY"  ]];
+    TRANSFORMATION="SyN[ 1,2,0.05 ]"
+    REGULARIZATION="Gauss[ 3,0. ]"
+elif [[ "${TRANSFORMATIONTYPE}" == "SY" ]];
     then
-    # Mapping Parameters for the LDDMM style SyN --- the params are SyN[GradientStepLength,NTimeDiscretizationPoints,IntegrationTimeStep]
+    # Mapping Parameters for the LDDMM style SyN --- the params are SyN[ GradientStepLength,NTimeDiscretizationPoints,IntegrationTimeStep]
     # increasing IntegrationTimeStep increases accuracy in the diffeomorphism integration and takes more computation time.
     # NTimeDiscretizationPoints is the number of spatial indices in the time dimension (the 4th dim when doing 3D registration)
     # increasing NTimeDiscretizationPoints increases flexibility and takes more computation time.
     # the --geodesic option enables either 1 asymmetric gradient estimation or 2 symmetric gradient estimation (the default here )
-    TRANSFORMATION=" SyN[1,2,0.05] --geodesic 2 "
-    REGULARIZATION=Gauss[3,0.]
-elif [[ "${TRANSFORMATIONTYPE}" == "LDDMM"  ]];
+    TRANSFORMATION="SyN[ 1,2,0.05 ] --geodesic 2"
+    REGULARIZATION="Gauss[ 3,0. ]"
+elif [[ "${TRANSFORMATIONTYPE}" == "LDDMM" ]];
    then
-   # Mapping Parameters for the LDDMM style SyN --- the params are SyN[GradientStepLength,NTimeDiscretizationPoints,IntegrationTimeStep]
+   # Mapping Parameters for the LDDMM style SyN --- the params are SyN[ GradientStepLength,NTimeDiscretizationPoints,IntegrationTimeStep]
    # increasing IntegrationTimeStep increases accuracy in the diffeomorphism integration and takes more computation time.
    # NTimeDiscretizationPoints is the number of spatial indices in the time dimension (the 4th dim when doing 3D registration)
    # increasing NTimeDiscretizationPoints increases flexibility and takes more computation time.
    # the --geodesic option enables either 1 asymmetric gradient estimation or 2 symmetric gradient estimation (the default here )
-   TRANSFORMATION=" SyN[1,2,0.05] --geodesic 1 "
-   REGULARIZATION=Gauss[3,0.]
+   TRANSFORMATION="SyN[1,2,0.05 ] --geodesic 1"
+   REGULARIZATION="Gauss[ 3,0. ]"
 elif [[ "${TRANSFORMATIONTYPE}" == "GR" ]];
     then
     # Mapping Parameters for the greedy gradient descent (fast) version of SyN -- only needs GradientStepLength
-    TRANSFORMATION=SyN[0.25]
-    REGULARIZATION=Gauss[3,0]
+    TRANSFORMATION="SyN[ 0.25 ]"
+    REGULARIZATION="Gauss[ 3,0 ]"
 elif [[ "${TRANSFORMATIONTYPE}" == "GR_Constrained" ]];
     then
     # Mapping Parameters for the greedy gradient descent (fast) version of SyN -- only needs GradientStepLength
-    TRANSFORMATION=SyN[0.25]
-    REGULARIZATION=Gauss[3,0.5]
+    TRANSFORMATION="SyN[ 0.25 ]"
+    REGULARIZATION="Gauss[ 3,0.5 ]"
 
 elif [[ "${TRANSFORMATIONTYPE}" == "EX" ]];
     then
     # Mapping Parameters
-    TRANSFORMATION=Exp[0.5,10]
-    REGULARIZATION=Gauss[3,0.5]
+    TRANSFORMATION="Exp[ 0.5,10 ]"
+    REGULARIZATION="Gauss[ 3,0.5 ]"
 elif [[ "${TRANSFORMATIONTYPE}" == "DD" ]];
     then
     # Mapping Parameters for diffemorphic demons style optimization Exp[GradientStepLength,NTimePointsInIntegration]
     #  NTimePointsInIntegration controls the number of compositions in the transformation update , see the DD paper
-    TRANSFORMATION=GreedyExp[0.5,10]
-    REGULARIZATION=Gauss[3,0.5]
+    TRANSFORMATION="GreedyExp[ 0.5,10 ]"
+    REGULARIZATION="Gauss[ 3,0.5 ]"
 else
     echo "Invalid transformation metric. Use EL, SY, S2, GR , DD or EX or type bash `basename $0` -h."
     exit 1
@@ -1092,7 +1171,8 @@ while [[ $i -lt ${ITERATIONLIMIT} ]];
     rm -f ${OUTPUTNAME}*Warp*.nii*
     rm -f ${outdir}/job*.sh
     # Used to save time by only running coarse registration for the first couple of iterations
-    # But with decent initialization, this is probably not worthwhile.
+    # This may also help convergence, but because there's no way to turn it off, it makes it harder
+    # to refine templates with multiple calls to this script. 
     # If you uncomment this, replace MAXITERATIONS with ITERATIONS in the call to ants below
     #
     # # For the first couple of iterations, use high-level registration only
@@ -1132,23 +1212,23 @@ while [[ $i -lt ${ITERATIONLIMIT} ]];
             if [[ "${METRICTYPE[$k]}" == "PR" ]];
                 then
                 # Mapping Parameters
-                METRIC=PR[
-                METRICPARAMS="${MODALITYWEIGHTS[$k]},4]"
-            elif [[ "${METRICTYPE[$k]}" == "CC"  ]];
+                METRIC="PR[ "
+                METRICPARAMS="${MODALITYWEIGHTS[$k]},4 ]"
+            elif [[ "${METRICTYPE[$k]}" == "CC" ]];
                 then
                 # Mapping Parameters
-                METRIC=CC[
-                METRICPARAMS="${MODALITYWEIGHTS[$k]},5]"
+                METRIC="CC[ "
+                METRICPARAMS="${MODALITYWEIGHTS[$k]},5 ]"
             elif [[ "${METRICTYPE[$k]}" == "MI" ]];
                 then
                 # Mapping Parameters
-                METRIC=MI[
-                METRICPARAMS="${MODALITYWEIGHTS[$k]},32]"
+                METRIC="MI[ "
+                METRICPARAMS="${MODALITYWEIGHTS[$k]},32 ]"
             elif [[ "${METRICTYPE[$k]}" == "MSQ" ]];
                 then
                 # Mapping Parameters
-                METRIC=MSQ[
-                METRICPARAMS="${MODALITYWEIGHTS[$k]},0]"
+                METRIC="MSQ[ "
+                METRICPARAMS="${MODALITYWEIGHTS[$k]},0 ]"
             else
                 echo "Invalid similarity metric. Use CC, MI, MSQ or PR or type bash `basename $0` -h."
                 exit 1
@@ -1174,8 +1254,8 @@ while [[ $i -lt ${ITERATIONLIMIT} ]];
             if [[ $N4CORRECT -eq 1 ]];
               then
                 REPAIRED="${outdir}/${OUTFN}Repaired.nii.gz"
-                exe=" $exe $N4 -d ${DIM} -b [200] -c [50x50x40x30,0.00000001] -i ${IMAGESETARRAY[$l]} -o ${REPAIRED} -r 0 -s 2\n"
-                pexe=" $pexe $N4 -d ${DIM} -b [200] -c [50x50x40x30,0.00000001] -i ${IMAGESETARRAY[$l]} -o ${REPAIRED} -r 0 -s 2  >> ${outdir}/job_${count}_metriclog.txt\n"
+                exe=" $exe $N4 -d ${DIM} -b [ 200 ] -c [ 50x50x40x30,0.00000001 ] -i ${IMAGESETARRAY[$l]} -o ${REPAIRED} -r 0 -s 2\n"
+                pexe=" $pexe $N4 -d ${DIM} -b [ 200 ] -c [ 50x50x40x30,0.00000001 ] -i ${IMAGESETARRAY[$l]} -o ${REPAIRED} -r 0 -s 2  >> ${outdir}/job_${count}_metriclog.txt\n"
                 IMAGEMETRICSET="$IMAGEMETRICSET -m ${METRIC}${TEMPLATES[$k]},${REPAIRED},${METRICPARAMS}"
                 warpexe=" $warpexe ${WARP} ${DIM} ${REPAIRED} ${DEFORMED} -R ${TEMPLATES[$k]} ${outdir}/${OUTWARPFN}Warp.nii.gz ${outdir}/${OUTWARPFN}Affine.txt\n"
                 warppexe=" $warppexe ${WARP} ${DIM} ${REPAIRED} ${DEFORMED} -R ${TEMPLATES[$k]} ${outdir}/${OUTWARPFN}Warp.nii.gz ${outdir}/${OUTWARPFN}Affine.txt >> ${outdir}/job_${count}_metriclog.txt\n"
@@ -1318,7 +1398,7 @@ while [[ $i -lt ${ITERATIONLIMIT} ]];
     fi
     for (( j = 0; j < $NUMBEROFMODALITIES; j++ ))
         do
-        shapeupdatetotemplate ${DIM} ${TEMPLATES[$j]} ${TEMPLATENAME} ${OUTPUTNAME} ${GRADIENTSTEP} ${j}
+        shapeupdatetotemplate ${DIM} ${TEMPLATES[$j]} ${TEMPLATENAME} ${OUTPUTNAME} ${GRADIENTSTEP} ${STATSMETHOD} ${SHARPENMETHOD} ${j}
     done
     if [[ BACKUP_EACH_ITERATION -eq 1 ]];
       then
@@ -1327,7 +1407,7 @@ while [[ $i -lt ${ITERATIONLIMIT} ]];
         echo " Backing up results from iteration $itdisplay"
         echo "--------------------------------------------------------------------------------------"
         mkdir ${outdir}/${TRANSFORMATIONTYPE}_iteration_${i}
-        cp ${TEMPLATENAME}${j}warplog.txt ${outdir}/*.cfg ${OUTPUTNAME}*.nii.gz ${outdir}/${TRANSFORMATIONTYPE}_iteration_${i}/
+        cp ${TEMPLATENAME}${j}warplog.txt ${outdir}/*.cfg ${outdir}/*Affine.txt ${OUTPUTNAME}*.nii.gz ${outdir}/${TRANSFORMATIONTYPE}_iteration_${i}/
         # backup logs
         if [[ $DOQSUB -eq 1 ]];
             then

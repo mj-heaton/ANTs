@@ -24,8 +24,7 @@ void RegisterMatOff()
     MatOffRegistered[VImageDimension - 2] = true;
     // Register the matrix offset transform base class to the
     // transform factory for compatibility with the current ANTs.
-    typedef itk::MatrixOffsetTransformBase<double, VImageDimension,
-                                           VImageDimension> MatrixOffsetTransformType;
+    using MatrixOffsetTransformType = itk::MatrixOffsetTransformBase<double, VImageDimension, VImageDimension>;
     itk::TransformFactory<MatrixOffsetTransformType>::RegisterTransform();
     }
 }
@@ -50,16 +49,14 @@ template <unsigned int VImageDimension>
 int
 Disassemble(itk::TransformBaseTemplate<double> *transform, const std::string & transformName, const std::string & prefix)
 {
-  typedef itk::CompositeTransform<double, VImageDimension>                  CompositeTransformType;
-  typedef typename CompositeTransformType::TransformTypePointer             TransformPointer;
-  typedef typename itk::DisplacementFieldTransform<double, VImageDimension> DisplacementFieldTransformType;
+  using CompositeTransformType = itk::CompositeTransform<double, VImageDimension>;
+  using TransformPointer = typename CompositeTransformType::TransformTypePointer;
+  using DisplacementFieldTransformType = typename itk::DisplacementFieldTransform<double, VImageDimension>;
 
   auto *composite = dynamic_cast<CompositeTransformType *>(transform);
   if( composite == nullptr )
     {
-    std::cout << "Transform File " << transformName << " is a "
-             << transform->GetNameOfClass() << " not a Composite Transform."
-             << std::endl;
+    std::cout << "Transform File " << transformName << " is not a Composite Transform." << std::endl;
     return EXIT_FAILURE;
     }
 
@@ -128,8 +125,8 @@ Assemble(const std::string & CompositeName,
          const std::vector<std::string> & transformNames,
          const typename itk::Transform<double, VImageDimension, VImageDimension>::Pointer & firstTransform)
 {
-  typedef itk::CompositeTransform<double, VImageDimension> CompositeTransformType;
-  typedef typename CompositeTransformType::TransformType   TransformType;
+  using CompositeTransformType = itk::CompositeTransform<double, VImageDimension>;
+  using TransformType = typename CompositeTransformType::TransformType;
   typename CompositeTransformType::Pointer composite = CompositeTransformType::New();
   composite->AddTransform(firstTransform);
   for( unsigned int i = 1; i < transformNames.size(); ++i )
@@ -262,7 +259,7 @@ private:
     }
   while( argc != 0 );
 
-  if( transformNames.size() < 1 )
+  if( transformNames.empty() )
     {
     std::cout << "Missing transform names to "
              << "assemble into a composite transform"

@@ -11,8 +11,8 @@
      PURPOSE.  See the above copyright notices for more information.
 
 =========================================================================*/
-#ifndef __itkLabeledPointSetFileWriter_hxx
-#define __itkLabeledPointSetFileWriter_hxx
+#ifndef itkLabeledPointSetFileWriter_hxx
+#define itkLabeledPointSetFileWriter_hxx
 
 #include "itkLabeledPointSetFileWriter.h"
 
@@ -84,7 +84,7 @@ LabeledPointSetFileWriter<TInputMesh>
 {
   if( this->m_FileName == "" )
     {
-    itkExceptionMacro( "No FileName" );
+    itkExceptionMacro( "No FileName" )
     return;
     }
 
@@ -98,9 +98,8 @@ LabeledPointSetFileWriter<TInputMesh>
     bbox->ComputeBoundingBox();
     for( unsigned int d = 0; d < Dimension; d++ )
       {
-      this->m_ImageSpacing[d] = (
-          bbox->GetMaximum()[d]
-          - bbox->GetMinimum()[d] )
+      this->m_ImageSpacing[d] =
+          static_cast<double>( bbox->GetMaximum()[d] - bbox->GetMinimum()[d] )
         / static_cast<double>( this->m_ImageSize[d] + 1 );
       }
     this->m_ImageDirection.SetIdentity();
@@ -114,7 +113,7 @@ LabeledPointSetFileWriter<TInputMesh>
   if( !outputFile.is_open() )
     {
     itkExceptionMacro( "Unable to open file\n"
-                       "outputFilename= " << m_FileName );
+                       "outputFilename= " << m_FileName )
     return;
     }
   else
@@ -145,7 +144,7 @@ LabeledPointSetFileWriter<TInputMesh>
       }
     catch( ... )
       {
-      itkExceptionMacro( "Unknown extension: " << extension );
+      itkExceptionMacro( "Unknown extension: " << extension )
       }
     }
 }

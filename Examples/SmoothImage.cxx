@@ -24,8 +24,8 @@ namespace ants
 template <unsigned int ImageDimension>
 int SmoothImage(int argc, char *argv[])
 {
-  typedef float                                                           PixelType;
-  typedef itk::Image<PixelType, ImageDimension>                           ImageType;
+  using PixelType = float;
+  using ImageType = itk::Image<PixelType, ImageDimension>;
 
   std::vector<float> sigmaVector = ConvertVector<float>( argv[3] );
 
@@ -33,16 +33,18 @@ int SmoothImage(int argc, char *argv[])
   typename ImageType::Pointer varimage = nullptr;
   ReadImage<ImageType>(image1, argv[2]);
 
-  typedef itk::SmoothingRecursiveGaussianImageFilter<ImageType, ImageType> rgf;
-  typedef itk::MedianImageFilter<ImageType, ImageType>           medf;
+  using rgf = itk::SmoothingRecursiveGaussianImageFilter<ImageType, ImageType>;
+  using medf = itk::MedianImageFilter<ImageType, ImageType>;
   typename rgf::Pointer filter = rgf::New();
   typename medf::Pointer filter2 = medf::New();
   typename rgf::SigmaArrayType sigmaArray;
   auto & spacing  = image1->GetSpacing();
-  bool usespacing = false;
+  // If true, sigma is in spacing units (usually mm), not voxels
+  // The recursive filter wants a sigma in mm so we convert if given voxels
+  bool sigmaInSpacingUnits = false;
   if( argc  >  5 )
     {
-    usespacing = std::stoi(argv[5]);
+    sigmaInSpacingUnits = std::stoi(argv[5]);
     }
   bool usemedian = false;
   if( argc  >  6 )
@@ -58,16 +60,16 @@ int SmoothImage(int argc, char *argv[])
       for( unsigned int d = 0; d < ImageDimension; d++ )
         {
         if ( sigmaVector.size() == 1 ) {
-          if ( usespacing ) {
-            sigmaArray[d] = sigmaVector[0]*spacing[d];
-          } else {
+          if ( sigmaInSpacingUnits ) {
             sigmaArray[d] = sigmaVector[0];
+          } else {
+            sigmaArray[d] = sigmaVector[0] * static_cast<float>( spacing[d] );
           }
         } else
-          if ( usespacing ) {
-            sigmaArray[d] = sigmaVector[d]*spacing[d];
-          } else {
+          if ( sigmaInSpacingUnits ) {
             sigmaArray[d] = sigmaVector[d];
+          } else {
+            sigmaArray[d] = sigmaVector[d] * static_cast<float>( spacing[d] );
           }
         }
       filter->SetSigmaArray( sigmaArray );
@@ -158,9 +160,9 @@ private:
     std::cout << "Usage:  " << std::endl;
     std::cout << argv[0]
              <<
-      " ImageDimension image.ext smoothingsigma outimage.ext {sigma-is-in-spacing-coordinates-0/1} {medianfilter-0/1}"
+      " ImageDimension image.ext smoothingsigma outimage.ext {sigma-is-in-spacing-units-(0)/1} {medianfilter-(0)/1}"
              << std::endl;
-    std::cout << " if median, then sigma means radius of filtering " << std::endl;
+    std::cout << " If using median filter, sigma is the radius of filtering, in voxels " << std::endl;
     std::cout << " A separate sigma can be specified for each dimension, e.g., 1.5x1x2 " << std::endl;
     if( argc >= 2 &&
         ( std::string( argv[1] ) == std::string("--help") || std::string( argv[1] ) == std::string("-h") ) )

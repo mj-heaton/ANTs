@@ -31,12 +31,12 @@
 namespace ants
 {
 template <typename TFilter>
-class CommandIterationUpdate : public itk::Command
+class CommandIterationUpdate final : public itk::Command
 {
 public:
-  typedef CommandIterationUpdate  Self;
-  typedef itk::Command            Superclass;
-  typedef itk::SmartPointer<Self> Pointer;
+  using Self = CommandIterationUpdate<TFilter>;
+  using Superclass = itk::Command;
+  using Pointer = itk::SmartPointer<Self>;
   itkNewMacro( Self );
 protected:
   CommandIterationUpdate() = default;
@@ -62,7 +62,7 @@ public:
     std::cout << "posterior probability = "
              << filter->GetCurrentPosteriorProbability();
 
-    typedef typename TFilter::RealType RealType;
+    using RealType = typename TFilter::RealType;
 
     RealType annealingTemperature = filter->GetInitialAnnealingTemperature()
       * std::pow( filter->GetAnnealingRate(), static_cast<RealType>(
@@ -79,12 +79,12 @@ public:
 template <unsigned int ImageDimension>
 int AtroposSegmentation( itk::ants::CommandLineParser *parser )
 {
-  typedef float                                 PixelType;
-  typedef float                                 RealType;
-  typedef itk::Image<PixelType, ImageDimension> InputImageType;
+  using PixelType = float;
+  using RealType = float;
+  using InputImageType = itk::Image<PixelType, ImageDimension>;
 
-  typedef unsigned int                          LabelType;
-  typedef itk::Image<LabelType, ImageDimension> LabelImageType;
+  using LabelType = unsigned int;
+  using LabelImageType = itk::Image<LabelType, ImageDimension>;
 
   bool verbose = false;
   typename itk::ants::CommandLineParser::OptionType::Pointer verboseOption =
@@ -100,14 +100,13 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
              << ImageDimension << "-dimensional images." << std::endl;
     }
 
-  typedef  itk::ants::AtroposSegmentationImageFilter
-    <InputImageType, LabelImageType> SegmentationFilterType;
+  using SegmentationFilterType = itk::ants::AtroposSegmentationImageFilter<InputImageType, LabelImageType>;
   typename SegmentationFilterType::Pointer segmenter
     = SegmentationFilterType::New();
 
   if( verbose )
     {
-    typedef CommandIterationUpdate<SegmentationFilterType> CommandType;
+    using CommandType = CommandIterationUpdate<SegmentationFilterType>;
     typename CommandType::Pointer observer = CommandType::New();
     segmenter->AddObserver( itk::IterationEvent(), observer );
     }
@@ -225,7 +224,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
         }
       else
         {
-        typedef itk::VectorImage<PixelType, ImageDimension> VectorImageType;
+        using VectorImageType = itk::VectorImage<PixelType, ImageDimension>;
         typename VectorImageType::Pointer image;
         ReadImage<VectorImageType>( image, filename.c_str() );
 
@@ -240,7 +239,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
           return EXIT_FAILURE;
           }
 
-        typedef itk::VectorIndexSelectionCastImageFilter<VectorImageType, InputImageType> CasterType;
+        using CasterType = itk::VectorIndexSelectionCastImageFilter<VectorImageType, InputImageType>;
         typename CasterType::Pointer caster = CasterType::New();
         caster->SetInput( image );
         for( unsigned int k = 0; k < segmenter->GetNumberOfTissueClasses(); k++ )
@@ -305,7 +304,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
         {
         annealingTemperature =
           parser->Convert<RealType>( posteriorOption->GetFunction( 0 )->GetParameter( 1 ) );
-        if( annealingTemperature <= 0.0 )
+        if( annealingTemperature <= itk::NumericTraits<RealType>::ZeroValue() )
           {
           if( verbose )
             {
@@ -321,7 +320,8 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
         {
         annealingRate =
           parser->Convert<RealType>( posteriorOption->GetFunction( 0 )->GetParameter( 2 ) );
-        if( annealingRate < 0.0 || annealingRate > 1.0 )
+        if( annealingRate < itk::NumericTraits<RealType>::ZeroValue() ||
+            annealingRate > itk::NumericTraits<RealType>::OneValue() )
           {
           if( verbose )
             {
@@ -568,13 +568,13 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
         {
         labelBoundaryProbability = parser->Convert<float>(
             labelOption->GetFunction( 0 )->GetParameter( 1 ) );
-        if( labelBoundaryProbability < 0.0 )
+        if( labelBoundaryProbability < itk::NumericTraits<float>::ZeroValue() )
           {
-          labelBoundaryProbability = 0.0;
+          labelBoundaryProbability = itk::NumericTraits<float>::ZeroValue();
           }
-        if( labelBoundaryProbability > 1.0 )
+        if( labelBoundaryProbability > itk::NumericTraits<float>::OneValue() )
           {
-          labelBoundaryProbability = 1.0;
+          labelBoundaryProbability = itk::NumericTraits<float>::OneValue();
           }
         }
       for( unsigned int n = 1; n <= segmenter->GetNumberOfTissueClasses(); n++ )
@@ -599,13 +599,13 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
         if( labelOption->GetFunction( n )->GetNumberOfParameters() > 1 )
           {
           labelBoundaryProbability = parser->Convert<float>( labelOption->GetFunction( n )->GetParameter( 1 ) );
-          if( labelBoundaryProbability < 0.0 )
+          if( labelBoundaryProbability < itk::NumericTraits<float>::ZeroValue() )
             {
-            labelBoundaryProbability = 0.0;
+            labelBoundaryProbability = itk::NumericTraits<float>::ZeroValue();
             }
-          if( labelBoundaryProbability > 1.0 )
+          if( labelBoundaryProbability > itk::NumericTraits<float>::OneValue() )
             {
-            labelBoundaryProbability = 1.0;
+            labelBoundaryProbability = itk::NumericTraits<float>::OneValue();
             }
           }
         labelPair.first = labelLambda;
@@ -674,10 +674,8 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
       {
       try
         {
-        typedef typename SegmentationFilterType::RealImageType
-          MRFCoefficientImageType;
-        typedef itk::ImageFileReader<MRFCoefficientImageType>
-          MRFNeighborhoodImageReaderType;
+        using MRFCoefficientImageType = typename SegmentationFilterType::RealImageType;
+        using MRFNeighborhoodImageReaderType = itk::ImageFileReader<MRFCoefficientImageType>;
         typename MRFNeighborhoodImageReaderType::Pointer mrfNeighborhoodReader =
           MRFNeighborhoodImageReaderType::New();
         mrfNeighborhoodReader->SetFileName( mrfOption->GetFunction( 0 )->GetParameter( 0 ) );
@@ -783,9 +781,8 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
     ConvertToLowerCase( likelihoodModel );
     if( !likelihoodModel.compare( std::string( "gaussian" ) ) )
       {
-      typedef typename SegmentationFilterType::SampleType SampleType;
-      typedef itk::ants::Statistics::GaussianListSampleFunction
-        <SampleType, float, float> LikelihoodType;
+      using SampleType = typename SegmentationFilterType::SampleType;
+      using LikelihoodType = itk::ants::Statistics::GaussianListSampleFunction<SampleType, float, float>;
       for( unsigned int n = 0; n < segmenter->GetNumberOfTissueClasses(); n++ )
         {
         typename LikelihoodType::Pointer gaussianLikelihood =
@@ -795,9 +792,8 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
       }
     else if( !likelihoodModel.compare( std::string( "manifoldparzenwindows" ) ) )
       {
-      typedef typename SegmentationFilterType::SampleType SampleType;
-      typedef itk::ants::Statistics::ManifoldParzenWindowsListSampleFunction
-        <SampleType, float, float> LikelihoodType;
+      using SampleType = typename SegmentationFilterType::SampleType;
+      using LikelihoodType = itk::ants::Statistics::ManifoldParzenWindowsListSampleFunction<SampleType, float, float>;
 
       float regularizationSigma = 1.0;
       if( likelihoodOption->GetFunction( 0 )->GetNumberOfParameters() > 0 )
@@ -832,9 +828,8 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
       }
     else if( !likelihoodModel.compare( std::string( "histogramparzenwindows" ) ) )
       {
-      typedef typename SegmentationFilterType::SampleType SampleType;
-      typedef itk::ants::Statistics::HistogramParzenWindowsListSampleFunction
-        <SampleType, float, float> LikelihoodType;
+      using SampleType = typename SegmentationFilterType::SampleType;
+      using LikelihoodType = itk::ants::Statistics::HistogramParzenWindowsListSampleFunction<SampleType, float, float>;
 
       float sigma = 1.0;
       if( likelihoodOption->GetFunction( 0 )->GetNumberOfParameters() > 0 )
@@ -868,10 +863,8 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
           }
         return EXIT_FAILURE;
         }
-      typedef typename SegmentationFilterType::SampleType SampleType;
-      typedef itk::ants::Statistics::
-        JointHistogramParzenShapeAndOrientationListSampleFunction
-        <SampleType, float, float> LikelihoodType;
+      using SampleType = typename SegmentationFilterType::SampleType;
+      using LikelihoodType = itk::ants::Statistics::JointHistogramParzenShapeAndOrientationListSampleFunction<SampleType, float, float>;
 
       float shapeSigma = 2.0;
       if( likelihoodOption->GetFunction( 0 )->GetNumberOfParameters() > 0 )
@@ -918,9 +911,8 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
           }
         return EXIT_FAILURE;
         }
-      typedef typename SegmentationFilterType::SampleType SampleType;
-      typedef itk::ants::Statistics::LogEuclideanGaussianListSampleFunction
-        <SampleType, float, float> LikelihoodType;
+      using SampleType = typename SegmentationFilterType::SampleType;
+      using LikelihoodType = itk::ants::Statistics::LogEuclideanGaussianListSampleFunction<SampleType, float, float>;
       for( unsigned int n = 0; n < segmenter->GetNumberOfTissueClasses(); n++ )
         {
         typename LikelihoodType::Pointer gaussianLikelihood =
@@ -962,9 +954,8 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
         }
       segmenter->AddPartialVolumeLabelSet( labelSet );
 
-      typedef typename SegmentationFilterType::SampleType SampleType;
-      typedef itk::ants::Statistics::PartialVolumeGaussianListSampleFunction
-        <SampleType, float, float> LikelihoodType;
+      using SampleType = typename SegmentationFilterType::SampleType;
+      using LikelihoodType = itk::ants::Statistics::PartialVolumeGaussianListSampleFunction<SampleType, float, float>;
 
       typename LikelihoodType::Pointer partialVolumeLikelihood =
         LikelihoodType::New();
@@ -1004,9 +995,8 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
     ConvertToLowerCase( outlierStrategy );
     if( !outlierStrategy.compare( std::string( "boxplot" ) ) )
       {
-      typedef typename SegmentationFilterType::SampleType SampleType;
-      typedef itk::ants::Statistics::BoxPlotQuantileListSampleFilter<SampleType>
-        SampleFilterType;
+      using SampleType = typename SegmentationFilterType::SampleType;
+      using SampleFilterType = itk::ants::Statistics::BoxPlotQuantileListSampleFilter<SampleType>;
       typename SampleFilterType::Pointer boxplotFilter =
         SampleFilterType::New();
 
@@ -1027,9 +1017,8 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
       }
     else if( !outlierStrategy.compare( std::string( "grubbsrosner" ) ) )
       {
-      typedef typename SegmentationFilterType::SampleType SampleType;
-      typedef itk::ants::Statistics::GrubbsRosnerListSampleFilter<SampleType>
-        SampleFilterType;
+      using SampleType = typename SegmentationFilterType::SampleType;
+      using SampleFilterType = itk::ants::Statistics::GrubbsRosnerListSampleFilter<SampleType>;
       typename SampleFilterType::Pointer grubbsFilter = SampleFilterType::New();
 
       if( outlierOption->GetFunction( 0 )->GetNumberOfParameters() > 0 )
@@ -1083,7 +1072,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
     {
     if( segmenter->GetUseAsynchronousUpdating() && segmenter->GetICMCodeImage() )
       {
-      typedef  itk::ImageFileWriter<LabelImageType> WriterType;
+      using WriterType = itk::ImageFileWriter<LabelImageType>;
       typename WriterType::Pointer writer = WriterType::New();
       writer->SetInput( segmenter->GetICMCodeImage() );
       writer->SetFileName( ( icmOption->GetFunction( 0 )->GetParameter( 2 ) ).c_str() );
@@ -1126,7 +1115,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
 
         if( segmenter->GetMaskImage() )
           {
-          typedef itk::MaskImageFilter<InputImageType, LabelImageType, InputImageType> MaskerType;
+          using MaskerType = itk::MaskImageFilter<InputImageType, LabelImageType, InputImageType>;
           typename MaskerType::Pointer masker = MaskerType::New();
           masker->SetInput1( probabilityImage );
           masker->SetInput2( segmenter->GetMaskImage() );
@@ -1136,7 +1125,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
           probabilityImage = masker->GetOutput();
           }
 
-        typedef  itk::ImageFileWriter<InputImageType> WriterType;
+        using WriterType = itk::ImageFileWriter<InputImageType>;
         typename WriterType::Pointer writer = WriterType::New();
         writer->SetInput( probabilityImage );
         writer->SetFileName( imageNames[i].c_str() );
@@ -1159,7 +1148,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
           std::cout << "  Writing likelihood image (class " << i + 1 << ")" << std::endl;
           }
         typename InputImageType::Pointer likelihoodImage = segmenter->GetLikelihoodImage( i + 1 );
-        typedef  itk::ImageFileWriter<InputImageType> WriterType;
+        using WriterType = itk::ImageFileWriter<InputImageType>;
         typename WriterType::Pointer writer = WriterType::New();
         writer->SetInput( likelihoodImage );
         writer->SetFileName( imageNames[i].c_str() );
@@ -1186,7 +1175,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
 
           typename InputImageType::Pointer distanceImage = segmenter->GetDistancePriorProbabilityImage( i + 1 );
 
-          typedef  itk::ImageFileWriter<InputImageType> WriterType;
+          using WriterType = itk::ImageFileWriter<InputImageType>;
           typename WriterType::Pointer writer = WriterType::New();
           writer->SetInput( distanceImage );
           writer->SetFileName( imageNames[i].c_str() );
@@ -1204,7 +1193,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
       fileNamesCreator->SetSeriesFormat( filename.c_str() );
       const std::vector<std::string> & imageNames = fileNamesCreator->GetFileNames();
 
-      if( segmenter->GetAdaptiveSmoothingWeight( 0 ) > 0.0 )
+      if( segmenter->GetAdaptiveSmoothingWeight( 0 ) > itk::NumericTraits<RealType>::ZeroValue() )
         {
         for( unsigned int i = 0; i < segmenter->GetNumberOfTissueClasses(); i++ )
           {
@@ -1219,7 +1208,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
             typename InputImageType::Pointer bsplineImage =
               segmenter->GetSmoothIntensityImageFromPriorImage( 0, i + 1 );
 
-            typedef  itk::ImageFileWriter<InputImageType> WriterType;
+            using WriterType = itk::ImageFileWriter<InputImageType>;
             typename WriterType::Pointer writer = WriterType::New();
             writer->SetInput( bsplineImage );
             writer->SetFileName( imageNames[i].c_str() );
@@ -1242,7 +1231,7 @@ int AtroposSegmentation( itk::ants::CommandLineParser *parser )
 
 void AtroposInitializeCommandLineOptions( itk::ants::CommandLineParser *parser )
 {
-  typedef itk::ants::CommandLineParser::OptionType OptionType;
+  using OptionType = itk::ants::CommandLineParser::OptionType;
 
   {
   std::string description =
@@ -1265,7 +1254,7 @@ void AtroposInitializeCommandLineOptions( itk::ants::CommandLineParser *parser )
     + std::string( "scenarios with no prior information, the first scalar " )
     + std::string( "image encountered on the command line is used to order " )
     + std::string( "labelings such that the class with the smallest intensity " )
-    + std::string( "signature is class \'1\' through class \'N\' which represents " )
+    + std::string( R"(signature is class '1' through class 'N' which represents )" )
     + std::string( "the voxels with the largest intensity values.  The " )
     + std::string( "optional adaptive smoothing weight parameter is applicable " )
     + std::string( "only when using prior label or probability images.  This " )
@@ -1710,11 +1699,14 @@ private:
     + std::string( "These prior constraints include the specification " )
     + std::string( "of a prior label image, prior probability images " )
     + std::string( "(one for each class), and/or an MRF prior to " )
-    + std::string( "enforce spatial smoothing of the labels.  Similar algorithms " )
-    + std::string( "include FAST and SPM.  Reference:  Avants BB, Tustison NJ, Wu " )
-    + std::string( "J, Cook PA, Gee JC. An open source multivariate framework for " )
-    + std::string( "n-tissue segmentation with evaluation on public data. " )
-    + std::string( "Neuroinformatics. 2011 Dec;9(4):381-400." );
+    + std::string( "enforce spatial smoothing of the labels.  All segmentation " )
+    + std::string( "images including priors and masks must be in the same " )
+    + std::string( "voxel and physical space.  Similar algorithms include FAST " )
+    + std::string( "and SPM.  Reference: " )
+    + std::string( "Avants BB, Tustison NJ, Wu J, Cook PA, Gee JC. An open " )
+    + std::string( "source multivariate framework for n-tissue segmentation " )
+    + std::string( "with evaluation on public data. Neuroinformatics. " )
+    + std::string( "2011 Dec;9(4):381-400.");
 
   parser->SetCommandDescription( commandDescription );
   AtroposInitializeCommandLineOptions( parser );
@@ -1774,7 +1766,7 @@ private:
       return EXIT_FAILURE;
       }
     itk::ImageIOBase::Pointer imageIO = itk::ImageIOFactory::CreateImageIO(
-        filename.c_str(), itk::ImageIOFactory::ReadMode );
+        filename.c_str(), itk::ImageIOFactory::FileModeEnum::ReadMode );
     dimension = imageIO->GetNumberOfDimensions();
     }
 

@@ -32,10 +32,10 @@ template <unsigned int ImageDimension>
 int SmoothDisplacementField( int argc, char *argv[] )
 {
 
-  typedef float RealType;
-  typedef itk::Image<RealType, ImageDimension> RealImageType;
-  typedef itk::Vector<RealType, ImageDimension> VectorType;
-  typedef itk::Image<VectorType, ImageDimension> DisplacementFieldType;
+  using RealType = float;
+  using RealImageType = itk::Image<RealType, ImageDimension>;
+  using VectorType = itk::Vector<RealType, ImageDimension>;
+  using DisplacementFieldType = itk::Image<VectorType, ImageDimension>;
 
   typename DisplacementFieldType::Pointer field = nullptr;
   ReadImage<DisplacementFieldType>( field, argv[2] );
@@ -49,12 +49,12 @@ int SmoothDisplacementField( int argc, char *argv[] )
     {
     float variance = var[0];
 
-    typedef itk::GaussianOperator<float, ImageDimension>                                             GaussianSmoothingOperatorType;
-    typedef itk::VectorNeighborhoodOperatorImageFilter<DisplacementFieldType, DisplacementFieldType> GaussianSmoothingSmootherType;
+    using GaussianSmoothingOperatorType = itk::GaussianOperator<float, ImageDimension>;
+    using GaussianSmoothingSmootherType = itk::VectorNeighborhoodOperatorImageFilter<DisplacementFieldType, DisplacementFieldType>;
 
     GaussianSmoothingOperatorType gaussianSmoothingOperator;
 
-    typedef itk::ImageDuplicator<DisplacementFieldType> DuplicatorType;
+    using DuplicatorType = itk::ImageDuplicator<DisplacementFieldType>;
     typename DuplicatorType::Pointer duplicator = DuplicatorType::New();
     duplicator->SetInputImage( field );
     duplicator->Update();
@@ -87,12 +87,12 @@ int SmoothDisplacementField( int argc, char *argv[] )
     const VectorType zeroVector( 0.0 );
 
     //make sure boundary does not move
-    float weight1 = 1.0;
-    if (variance < 0.5)
+    float weight1 = itk::NumericTraits<float>::OneValue();
+    if( variance < static_cast<float>( 0.5 ) )
       {
-      weight1 = 1.0 - 1.0 * ( variance / 0.5);
+      weight1 = itk::NumericTraits<float>::OneValue() - itk::NumericTraits<float>::OneValue() * ( variance / static_cast<float>( 0.5 ) );
       }
-    float weight2 = 1.0 - weight1;
+    float weight2 = itk::NumericTraits<float>::OneValue() - weight1;
 
     const typename DisplacementFieldType::RegionType region = field->GetLargestPossibleRegion();
     const typename DisplacementFieldType::SizeType size = region.GetSize();
@@ -127,7 +127,7 @@ int SmoothDisplacementField( int argc, char *argv[] )
     }
   else if( var.size() == ImageDimension )
     {
-    typedef itk::DisplacementFieldToBSplineImageFilter<DisplacementFieldType> BSplineFilterType;
+    using BSplineFilterType = itk::DisplacementFieldToBSplineImageFilter<DisplacementFieldType>;
 
     unsigned int numberOfLevels = 1;
     if( argc > 5 )
@@ -206,8 +206,8 @@ int SmoothDisplacementField( int argc, char *argv[] )
       {
       rmse_comp[d] += itk::Math::sqr ( fieldIt.Get()[d] - smoothedFieldIt.Get()[d] );
       }
-    rmse += ( fieldIt.Get() - smoothedFieldIt.Get() ).GetSquaredNorm();
-    N += 1.0;
+    rmse += static_cast<float>( ( fieldIt.Get() - smoothedFieldIt.Get() ).GetSquaredNorm() );
+    N += itk::NumericTraits<float>::OneValue();
     }
   rmse = std::sqrt( rmse / N );
 

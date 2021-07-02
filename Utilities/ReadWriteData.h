@@ -1,5 +1,6 @@
-#ifndef __ReadWriteData_h_
-#define __ReadWriteData_h_
+#ifndef ReadWriteData_h_
+#define ReadWriteData_h_
+
 #include "antsAllocImage.h"
 #include <iostream>
 #include <fstream>
@@ -414,8 +415,8 @@ bool ReadImageIntensityPointSet( itk::SmartPointer<TPointSet> & target, const ch
     return false;
     }
 
-  typename TImage::Pointer intensityImage = ReadImage<TImage>( (char *)imageFile );
-  typename TMask::Pointer maskImage = ReadImage<TMask>( (char *)maskFile );
+  typename TImage::Pointer intensityImage = ReadImage<TImage>( const_cast<char *>( imageFile ) );
+  typename TMask::Pointer maskImage = ReadImage<TMask>( const_cast<char *>( maskFile ) );
 
   typedef itk::ImageIntensityAndGradientToPointSetFilter<TImage, TMask, TPointSet> FilterType;
 
@@ -718,7 +719,7 @@ WriteDisplacementField2(TField* field, std::string filename, std::string app)
 
 template<typename TTimeSeriesImageType, typename MultiChannelImageType>
 typename MultiChannelImageType::Pointer
-ConvertTimeSeriesImageToMultiChannelImage( TTimeSeriesImageType *timeSeriesImage ) 
+ConvertTimeSeriesImageToMultiChannelImage( TTimeSeriesImageType *timeSeriesImage )
 {
   enum { ImageDimension = MultiChannelImageType::ImageDimension };
 
@@ -727,13 +728,13 @@ ConvertTimeSeriesImageToMultiChannelImage( TTimeSeriesImageType *timeSeriesImage
   typename MultiChannelImageType::RegionType::SizeType size;
   typename MultiChannelImageType::DirectionType direction;
 
-  typename TTimeSeriesImageType::SpacingType timeSeriesSpacing = 
+  typename TTimeSeriesImageType::SpacingType timeSeriesSpacing =
     timeSeriesImage->GetSpacing();
-  typename TTimeSeriesImageType::PointType timeSeriesOrigin = 
+  typename TTimeSeriesImageType::PointType timeSeriesOrigin =
     timeSeriesImage->GetOrigin();
-  typename TTimeSeriesImageType::RegionType::SizeType timeSeriesSize = 
+  typename TTimeSeriesImageType::RegionType::SizeType timeSeriesSize =
     timeSeriesImage->GetRequestedRegion().GetSize();
-  typename TTimeSeriesImageType::DirectionType timeSeriesDirection = 
+  typename TTimeSeriesImageType::DirectionType timeSeriesDirection =
     timeSeriesImage->GetDirection();
 
   for( itk::SizeValueType d = 0; d < ImageDimension; d++ )
@@ -747,7 +748,7 @@ ConvertTimeSeriesImageToMultiChannelImage( TTimeSeriesImageType *timeSeriesImage
       }
     }
 
-  typename MultiChannelImageType::Pointer multiChannelImage = 
+  typename MultiChannelImageType::Pointer multiChannelImage =
     MultiChannelImageType::New();
   multiChannelImage->SetRegions( size );
   multiChannelImage->SetSpacing( spacing );
@@ -756,9 +757,9 @@ ConvertTimeSeriesImageToMultiChannelImage( TTimeSeriesImageType *timeSeriesImage
   multiChannelImage->SetVectorLength( timeSeriesSize[ImageDimension] );
   multiChannelImage->Allocate();
 
-  itk::ImageRegionIteratorWithIndex<MultiChannelImageType> It( 
+  itk::ImageRegionIteratorWithIndex<MultiChannelImageType> It(
     multiChannelImage, multiChannelImage->GetRequestedRegion() );
-  for( It.GoToBegin(); !It.IsAtEnd(); ++It )  
+  for( It.GoToBegin(); !It.IsAtEnd(); ++It )
     {
     typename MultiChannelImageType::IndexType index = It.GetIndex();
 
@@ -770,7 +771,7 @@ ConvertTimeSeriesImageToMultiChannelImage( TTimeSeriesImageType *timeSeriesImage
       typename TTimeSeriesImageType::IndexType timeSeriesIndex;
       for( itk::SizeValueType d = 0; d < ImageDimension; d++ )
         {
-        timeSeriesIndex[d] = index[d];  
+        timeSeriesIndex[d] = index[d];
         }
       timeSeriesIndex[ImageDimension] = n;
       multiChannelVoxel[n] = timeSeriesImage->GetPixel( timeSeriesIndex );
@@ -783,15 +784,15 @@ ConvertTimeSeriesImageToMultiChannelImage( TTimeSeriesImageType *timeSeriesImage
 
 template<typename MultiChannelImageType, typename TimeSeriesImageType>
 typename TimeSeriesImageType::Pointer
-ConvertMultiChannelImageToTimeSeriesImage( MultiChannelImageType *multiChannelImage ) 
+ConvertMultiChannelImageToTimeSeriesImage( MultiChannelImageType *multiChannelImage )
 {
   enum { ImageDimension = MultiChannelImageType::ImageDimension };
 
   typename MultiChannelImageType::SpacingType spacing = multiChannelImage->GetSpacing();
   typename MultiChannelImageType::PointType origin = multiChannelImage->GetOrigin();
-  typename MultiChannelImageType::RegionType::SizeType size = 
+  typename MultiChannelImageType::RegionType::SizeType size =
     multiChannelImage->GetRequestedRegion().GetSize();
-  typename MultiChannelImageType::DirectionType direction = 
+  typename MultiChannelImageType::DirectionType direction =
     multiChannelImage->GetDirection();
 
   typename TimeSeriesImageType::SpacingType timeSeriesSpacing;
@@ -802,7 +803,7 @@ ConvertMultiChannelImageToTimeSeriesImage( MultiChannelImageType *multiChannelIm
 
   typename MultiChannelImageType::IndexType index;
   index.Fill( 0 );
-  typename MultiChannelImageType::PixelType multiChannelVoxel =   
+  typename MultiChannelImageType::PixelType multiChannelVoxel =
     multiChannelImage->GetPixel( index );
 
   for( itk::SizeValueType d = 0; d < ImageDimension; d++ )
@@ -817,15 +818,15 @@ ConvertMultiChannelImageToTimeSeriesImage( MultiChannelImageType *multiChannelIm
     }
   timeSeriesSpacing[ImageDimension] = 1;
   timeSeriesOrigin[ImageDimension] = 0;
-  timeSeriesSize[ImageDimension] = multiChannelVoxel.GetSize();  
+  timeSeriesSize[ImageDimension] = multiChannelVoxel.GetSize();
 
-  typename TimeSeriesImageType::Pointer timeSeriesImage = 
-    AllocImage<TimeSeriesImageType>( 
+  typename TimeSeriesImageType::Pointer timeSeriesImage =
+    AllocImage<TimeSeriesImageType>(
       timeSeriesSize, timeSeriesSpacing, timeSeriesOrigin, timeSeriesDirection );
 
-  itk::ImageRegionIteratorWithIndex<MultiChannelImageType> It( 
+  itk::ImageRegionIteratorWithIndex<MultiChannelImageType> It(
     multiChannelImage, multiChannelImage->GetRequestedRegion() );
-  for( It.GoToBegin(); !It.IsAtEnd(); ++It )  
+  for( It.GoToBegin(); !It.IsAtEnd(); ++It )
     {
     index = It.GetIndex();
     multiChannelVoxel = It.Get();
@@ -835,7 +836,7 @@ ConvertMultiChannelImageToTimeSeriesImage( MultiChannelImageType *multiChannelIm
       typename TimeSeriesImageType::IndexType timeSeriesIndex;
       for( itk::SizeValueType d = 0; d < ImageDimension; d++ )
         {
-        timeSeriesIndex[d] = index[d];  
+        timeSeriesIndex[d] = index[d];
         }
       timeSeriesIndex[ImageDimension] = n;
       timeSeriesImage->SetPixel( timeSeriesIndex, multiChannelVoxel[n] );
@@ -845,6 +846,124 @@ ConvertMultiChannelImageToTimeSeriesImage( MultiChannelImageType *multiChannelIm
   return timeSeriesImage;
 }
 
+template<typename TTimeSeriesImageType, typename FiveDimensionalImageType>
+typename FiveDimensionalImageType::Pointer
+ConvertTimeSeriesImageToFiveDimensionalImage( TTimeSeriesImageType *timeSeriesImage )
+{
+  enum { ImageDimension = 3 };
+
+  typename FiveDimensionalImageType::SpacingType spacing;
+  typename FiveDimensionalImageType::PointType origin;
+  typename FiveDimensionalImageType::RegionType::SizeType size;
+  typename FiveDimensionalImageType::DirectionType direction;
+
+  origin.Fill( 0.0 );
+  spacing.Fill( 1.0 );
+  direction.SetIdentity();
+
+  typename TTimeSeriesImageType::SpacingType timeSeriesSpacing =
+    timeSeriesImage->GetSpacing();
+  typename TTimeSeriesImageType::PointType timeSeriesOrigin =
+    timeSeriesImage->GetOrigin();
+  typename TTimeSeriesImageType::RegionType::SizeType timeSeriesSize =
+    timeSeriesImage->GetRequestedRegion().GetSize();
+  typename TTimeSeriesImageType::DirectionType timeSeriesDirection =
+    timeSeriesImage->GetDirection();
+
+  for( itk::SizeValueType d = 0; d < ImageDimension; d++ )
+    {
+    spacing[d] = timeSeriesSpacing[d];
+    origin[d] = timeSeriesOrigin[d];
+    size[d] = timeSeriesSize[d];
+    for( itk::SizeValueType e = 0; e < ImageDimension; e++ )
+      {
+      direction( d, e ) = timeSeriesDirection( d, e );
+      }
+    }
+  size[3] = itk::NumericTraits<itk::SizeValueType>::OneValue();
+  size[4] = timeSeriesSize[ImageDimension];
+
+  typename FiveDimensionalImageType::Pointer FiveDimensionalImage =
+    FiveDimensionalImageType::New();
+  FiveDimensionalImage->SetRegions( size );
+  FiveDimensionalImage->SetSpacing( spacing );
+  FiveDimensionalImage->SetOrigin( origin );
+  FiveDimensionalImage->SetDirection( direction );
+  FiveDimensionalImage->Allocate();
+
+  itk::ImageRegionIteratorWithIndex<FiveDimensionalImageType> It(
+    FiveDimensionalImage, FiveDimensionalImage->GetRequestedRegion() );
+  for( It.GoToBegin(); !It.IsAtEnd(); ++It )
+    {
+    typename FiveDimensionalImageType::IndexType index = It.GetIndex();
+    typename TTimeSeriesImageType::IndexType timeSeriesIndex;
+
+    timeSeriesIndex[0] = index[0];
+    timeSeriesIndex[1] = index[1];
+    timeSeriesIndex[2] = index[2];
+    timeSeriesIndex[3] = index[4];
+
+    It.Set( timeSeriesImage->GetPixel( timeSeriesIndex ) );
+    }
+
+  return FiveDimensionalImage;
+}
+
+template<typename FiveDimensionalImageType, typename TimeSeriesImageType>
+typename TimeSeriesImageType::Pointer
+ConvertFiveDimensionalImageToTimeSeriesImage( FiveDimensionalImageType *FiveDimensionalImage )
+{
+  enum { ImageDimension = 3 };
+
+  typename FiveDimensionalImageType::SpacingType spacing = FiveDimensionalImage->GetSpacing();
+  typename FiveDimensionalImageType::PointType origin = FiveDimensionalImage->GetOrigin();
+  typename FiveDimensionalImageType::RegionType::SizeType size =
+    FiveDimensionalImage->GetRequestedRegion().GetSize();
+  typename FiveDimensionalImageType::DirectionType direction =
+    FiveDimensionalImage->GetDirection();
+
+  typename TimeSeriesImageType::SpacingType timeSeriesSpacing;
+  typename TimeSeriesImageType::PointType timeSeriesOrigin;
+  typename TimeSeriesImageType::RegionType::SizeType timeSeriesSize;
+  typename TimeSeriesImageType::DirectionType timeSeriesDirection;
+
+  timeSeriesOrigin.Fill( 0.0 );
+  timeSeriesSpacing.Fill( 1.0 );
+  timeSeriesDirection.SetIdentity();
+
+  for( itk::SizeValueType d = 0; d < ImageDimension; d++ )
+    {
+    timeSeriesSpacing[d] = spacing[d];
+    timeSeriesOrigin[d] = origin[d];
+    timeSeriesSize[d] = size[d];
+    for( itk::SizeValueType e = 0; e < ImageDimension; e++ )
+      {
+      timeSeriesDirection( d, e ) = direction( d, e );
+      }
+    }
+  timeSeriesSize[3] = size[4];
+
+  typename TimeSeriesImageType::Pointer timeSeriesImage =
+    AllocImage<TimeSeriesImageType>(
+      timeSeriesSize, timeSeriesSpacing, timeSeriesOrigin, timeSeriesDirection );
+
+  itk::ImageRegionIteratorWithIndex<FiveDimensionalImageType> It(
+    FiveDimensionalImage, FiveDimensionalImage->GetRequestedRegion() );
+  for( It.GoToBegin(); !It.IsAtEnd(); ++It )
+    {
+    typename FiveDimensionalImageType::IndexType index = It.GetIndex();
+    typename TimeSeriesImageType::IndexType timeSeriesIndex;
+
+    timeSeriesIndex[0] = index[0];
+    timeSeriesIndex[1] = index[1];
+    timeSeriesIndex[2] = index[2];
+    timeSeriesIndex[3] = index[4];
+
+    timeSeriesImage->SetPixel( timeSeriesIndex, It.Get() );
+    }
+
+  return timeSeriesImage;
+}
 
 class nullBuf
 : public std::streambuf

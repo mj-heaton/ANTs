@@ -36,7 +36,7 @@ double vnl_pearson_corr( vnl_vector<TComp> v1, vnl_vector<TComp> v2 )
 
   for( unsigned int i = 0; i < v1.size(); i++ )
     {
-    xysum += v1(i) * v2(i);
+    xysum += static_cast<double>( v1(i) * v2(i) );
     }
   double frac = 1.0 / (double)v1.size();
   double xsum = v1.sum(), ysum = v2.sum();
@@ -56,9 +56,9 @@ bool RegionSCCA(typename NetworkType::Pointer network, typename NetworkType::Poi
                 unsigned int nLabels, unsigned int minRegionSize, unsigned int n_evec, unsigned int iterct, float sparsity,
                 bool robust, bool useL1, float gradstep, bool keepPositive, unsigned int minClusterSize )
 {
-  typedef itk::ants::antsSCCANObject<NetworkType, double>  SCCANType;
-  typedef typename SCCANType::MatrixType                   MatrixType;
-  typedef typename SCCANType::VectorType                   VectorType;
+  using SCCANType = itk::ants::antsSCCANObject<NetworkType, double>;
+  using MatrixType = typename SCCANType::MatrixType;
+  using VectorType = typename SCCANType::VectorType;
 
   // Determine the number of regions to examine
   std::set<unsigned int> labelset;
@@ -120,7 +120,7 @@ bool RegionSCCA(typename NetworkType::Pointer network, typename NetworkType::Poi
     for ( unsigned int v=0; v<nVoxels; v++)
       {
       idx[0] = v;
-      if ( labels->GetPixel(idx) == (i+1) )
+      if ( itk::Math::FloatAlmostEqual(  static_cast<float>( labels->GetPixel(idx) ), static_cast<float>( i+1 ) ) )
         {
         ++labelCounts[i];
         }
@@ -144,7 +144,7 @@ bool RegionSCCA(typename NetworkType::Pointer network, typename NetworkType::Poi
       typename NetworkType::IndexType timeIdx;
       timeIdx[1] = v;
 
-      if ( labels->GetPixel(idx) == (i+1) )
+      if ( itk::Math::FloatAlmostEqual(  static_cast<float>( labels->GetPixel(idx) ), static_cast<float>( i+1 ) ) )
         {
         for ( unsigned int t=0; t<nTimes; t++)
           {
@@ -176,7 +176,7 @@ bool RegionSCCA(typename NetworkType::Pointer network, typename NetworkType::Poi
           typename NetworkType::IndexType timeIdx2;
           timeIdx2[1] = v2;
 
-          if ( labels->GetPixel(idx2) == (j+1) )
+          if ( itk::Math::FloatAlmostEqual(  static_cast<float>( labels->GetPixel(idx2) ), static_cast<float>( j+1 ) ) )
             {
             for ( unsigned int t2=0; t2<nTimes; t2++)
               {
@@ -261,8 +261,8 @@ bool RegionAveraging(typename NetworkType::Pointer network, typename NetworkType
                      unsigned int nLabels, unsigned int minSize )
 {
 
-  typedef vnl_vector<float>                                     VectorType;
-  typedef vnl_matrix<float>                                     MatrixType;
+  using VectorType = vnl_vector<float>;
+  using MatrixType = vnl_matrix<float>;
 
   // Determine the number of regions to examine
   std::set<unsigned int> labelset;
@@ -322,7 +322,7 @@ bool RegionAveraging(typename NetworkType::Pointer network, typename NetworkType
     for ( unsigned int v=0; v<nVoxels; v++)
       {
       idx[0] = v;
-      if ( labels->GetPixel(idx) == (i+1) )
+      if ( itk::Math::FloatAlmostEqual(  static_cast<float>( labels->GetPixel(idx) ), static_cast<float>( i+1 ) ) )
         {
         labelCounts[i]++;
 
@@ -384,7 +384,7 @@ for (unsigned int i=0; i<N; i++)
 int timesccan( itk::ants::CommandLineParser *parser )
 {
 
-  typedef itk::Image<float,2>               NetworkType;
+  using NetworkType = itk::Image<float, 2>;
 
 
   std::string                                       outname = "output.nii.gz";
@@ -585,7 +585,7 @@ void InitializeCommandLineOptions( itk::ants::CommandLineParser *parser )
 {
   /** in this function, list all the operations you will perform */
 
-  typedef itk::ants::CommandLineParser::OptionType OptionType;
+  using OptionType = itk::ants::CommandLineParser::OptionType;
 
   {
   std::string         description = std::string( "Print the help menu (short version)." );
@@ -859,12 +859,11 @@ private:
       parser->GetOptions();
     for( unsigned int n = 0; n < longHelpOption->GetNumberOfFunctions(); n++ )
       {
-      std::string                                                  value = longHelpOption->GetFunction( n )->GetName();
-      itk::ants::CommandLineParser::OptionListType::const_iterator it;
-      for( it = options.begin(); it != options.end(); ++it )
+      const std::string & value = longHelpOption->GetFunction( n )->GetName();
+      for( auto it = options.cbegin(); it != options.cend(); ++it )
         {
-        const char *longName = ( ( *it )->GetLongName() ).c_str();
-        if( strstr( longName, value.c_str() ) == longName  )
+        const std::string & longname = ( *it )->GetLongName();
+        if ( longname.rfind(value, 0) == 0 )  // determining if `longname` starts with `value`
           {
           parser->PrintMenu( std::cout, 5, false );
           }

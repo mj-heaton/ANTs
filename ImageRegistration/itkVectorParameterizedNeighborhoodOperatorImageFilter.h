@@ -52,7 +52,7 @@ namespace itk
  */
 
 template <typename TInputImage, typename TOutputImage, typename TParamImage>
-class VectorParameterizedNeighborhoodOperatorImageFilter :
+class VectorParameterizedNeighborhoodOperatorImageFilter final :
   public         ImageToImageFilter<TInputImage, TOutputImage>
 {
 public:
@@ -125,8 +125,7 @@ public:
    * execution model.
    *
    * \sa ProcessObject::GenerateInputRequestedRegion() */
-  void GenerateInputRequestedRegion()
-    throw (InvalidRequestedRegionError) override;
+  void GenerateInputRequestedRegion() override;
 
   void SetParameterImage( ParameterImagePointer I)
   {

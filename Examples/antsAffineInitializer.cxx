@@ -125,7 +125,7 @@ class SimilarityTransformTraits
   // Don't worry about the fact that the default option is the
   // affine Transform, that one will not actually be instantiated.
 public:
-  typedef itk::AffineTransform<TComputeType, ImageDimension> TransformType;
+  using TransformType = itk::AffineTransform<TComputeType, ImageDimension>;
 };
 
 
@@ -133,58 +133,57 @@ template <>
 class SimilarityTransformTraits<double, 2>
 {
 public:
-  typedef itk::Similarity2DTransform<double> TransformType;
+  using TransformType = itk::Similarity2DTransform<double>;
 };
 
 template <>
 class SimilarityTransformTraits<float, 2>
 {
 public:
-  typedef itk::Similarity2DTransform<float> TransformType;
+  using TransformType = itk::Similarity2DTransform<float>;
 };
 
 template <>
 class SimilarityTransformTraits<double, 3>
 {
 public:
-  typedef itk::Similarity3DTransform<double> TransformType;
+  using TransformType = itk::Similarity3DTransform<double>;
 };
 
 template <>
 class SimilarityTransformTraits<float, 3>
 {
 public:
-  typedef itk::Similarity3DTransform<float> TransformType;
+  using TransformType = itk::Similarity3DTransform<float>;
 };
 
 
 template <unsigned int ImageDimension>
 int antsAffineInitializerImp(int argc, char *argv[])
 {
-  typedef double RealType;
-  typedef float  PixelType;
+  using RealType = double;
+  using PixelType = float;
 
   /** Define All Parameters Here */
   double       pi = itk::Math::pi;                // probably a vnl alternative
   RealType     searchfactor = 10;                // in degrees, passed by user
   unsigned int mibins = 32;                      // for mattes MI metric
   RealType     degtorad = 0.0174532925;          // to convert degrees to radians
-  unsigned int localoptimizeriterations = 20;    // for local search via conjgrad
+  //NOT USED: unsigned int localoptimizeriterations = 20;    // for local search via conjgrad
   // piover4 is (+/-) for cross-section of the sphere to multi-start search in increments
   // of searchfactor ( converted from degrees to radians ).
   // the search is centered +/- from the principal axis alignment of the images.
   RealType piover4 = pi / 4; // works in preliminary practical examples in 3D, in 2D use pi.
   bool     useprincaxis = false;
-  typedef typename itk::ImageMaskSpatialObject<ImageDimension>::ImageType
-    maskimagetype;
+  using maskimagetype = typename itk::ImageMaskSpatialObject<ImageDimension>::ImageType;
   std::string whichMetric=std::string("MI");
   unsigned int localSearchIterations = 20;
-  typedef itk::TransformFileWriter                                        TransformWriterType;
-  typedef itk::Vector<float, ImageDimension>                              VectorType;
-  typedef itk::Image<PixelType, ImageDimension>                           ImageType;
-  typedef typename itk::ImageMomentsCalculator<ImageType>                 ImageCalculatorType;
-  typedef itk::AffineTransform<RealType, ImageDimension> AffineType;
-  typedef typename ImageCalculatorType::MatrixType                        MatrixType;
+  using TransformWriterType = itk::TransformFileWriter;
+  using VectorType = itk::Vector<float, ImageDimension>;
+  using ImageType = itk::Image<PixelType, ImageDimension>;
+  using ImageCalculatorType = typename itk::ImageMomentsCalculator<ImageType>;
+  using AffineType = itk::AffineTransform<RealType, ImageDimension>;
+  using MatrixType = typename ImageCalculatorType::MatrixType;
   if( argc < 2 )
     {
     return 0;
@@ -216,7 +215,8 @@ int antsAffineInitializerImp(int argc, char *argv[])
     }
   if(  argc > argct )
     {
-    localoptimizeriterations = std::stoi( argv[argct] );   argct++;
+    //NOT USED: localoptimizeriterations = std::stoi( argv[argct] );
+    argct++;
     }
   typename ImageType::Pointer image1 = nullptr;
   typename ImageType::Pointer image2 = nullptr;
@@ -281,10 +281,10 @@ int antsAffineInitializerImp(int argc, char *argv[])
     {
     eigind1 = 2;
     }
-  vnl_vector<RealType> evec1_2ndary =  cpa1.GetVnlMatrix().get_row( eigind2 );
-  vnl_vector<RealType> evec1_primary = cpa1.GetVnlMatrix().get_row( eigind1 );
-  vnl_vector<RealType> evec2_2ndary  = cpa2.GetVnlMatrix().get_row( eigind2 );
-  vnl_vector<RealType> evec2_primary = cpa2.GetVnlMatrix().get_row( eigind1 );
+  vnl_vector<RealType> evec1_primary { cpa1.GetVnlMatrix().get_row( eigind1 ).as_vector()  };
+  vnl_vector<RealType> evec2_primary { cpa2.GetVnlMatrix().get_row( eigind1 ).as_vector()  };
+  vnl_vector<RealType> evec1_2ndary  { cpa1.GetVnlMatrix().get_row( eigind2 ).as_vector()  };
+  vnl_vector<RealType> evec2_2ndary  { cpa2.GetVnlMatrix().get_row( eigind2 ).as_vector()  };
   /** Solve Wahba's problem --- http://en.wikipedia.org/wiki/Wahba%27s_problem */
   vnl_matrix<RealType> B = outer_product( evec2_primary, evec1_primary );
   if( ImageDimension == 3 )
@@ -359,13 +359,11 @@ int antsAffineInitializerImp(int argc, char *argv[])
     axis2[d] = evec1_2ndary[d];
     }
     typename AffineType::Pointer affinesearch = AffineType::New();
-    typedef  itk::MultiStartOptimizerv4         OptimizerType;
+    using OptimizerType = itk::MultiStartOptimizerv4;
     typename OptimizerType::MetricValuesListType metricvalues;
     typename OptimizerType::Pointer  mstartOptimizer = OptimizerType::New();
-    typedef itk::CorrelationImageToImageMetricv4
-    <ImageType, ImageType, ImageType> GCMetricType;
-    typedef itk::MattesMutualInformationImageToImageMetricv4
-    <ImageType, ImageType, ImageType> MetricType;
+    using GCMetricType = itk::CorrelationImageToImageMetricv4<ImageType, ImageType, ImageType>;
+    using MetricType = itk::MattesMutualInformationImageToImageMetricv4<ImageType, ImageType, ImageType>;
     typename MetricType::ParametersType newparams(  affine1->GetParameters() );
     typename GCMetricType::Pointer gcmetric = GCMetricType::New();
     gcmetric->SetFixedImage( image1 );
@@ -387,7 +385,7 @@ int antsAffineInitializerImp(int argc, char *argv[])
       mimetric->SetFixedImageMask( so );
       gcmetric->SetFixedImageMask( so );
     }
-    typedef  itk::ConjugateGradientLineSearchOptimizerv4 LocalOptimizerType;
+    using LocalOptimizerType = itk::ConjugateGradientLineSearchOptimizerv4;
     typename LocalOptimizerType::Pointer  localoptimizer =
     LocalOptimizerType::New();
     RealType     localoptimizerlearningrate = 0.1;
@@ -404,8 +402,8 @@ int antsAffineInitializerImp(int argc, char *argv[])
     localoptimizer->SetConvergenceWindowSize( 5 );
     if( true )
     {
-      typedef typename MetricType::FixedSampledPointSetType PointSetType;
-      typedef typename PointSetType::PointType              PointType;
+      using PointSetType = typename MetricType::FixedSampledPointSetType;
+      using PointType = typename PointSetType::PointType;
       typename PointSetType::Pointer      pset(PointSetType::New());
       unsigned int ind=0;
       unsigned int ct=0;
@@ -430,8 +428,7 @@ int antsAffineInitializerImp(int argc, char *argv[])
     }
     if ( whichMetric.compare("MI") == 0  ) {
       mimetric->Initialize();
-      typedef itk::RegistrationParameterScalesFromPhysicalShift<MetricType>
-      RegistrationParameterScalesFromPhysicalShiftType;
+      using RegistrationParameterScalesFromPhysicalShiftType = itk::RegistrationParameterScalesFromPhysicalShift<MetricType>;
       typename RegistrationParameterScalesFromPhysicalShiftType::Pointer
       shiftScaleEstimator =
       RegistrationParameterScalesFromPhysicalShiftType::New();
@@ -447,8 +444,7 @@ int antsAffineInitializerImp(int argc, char *argv[])
     }
     if ( whichMetric.compare("MI") != 0  ) {
       gcmetric->Initialize();
-      typedef itk::RegistrationParameterScalesFromPhysicalShift<GCMetricType>
-      RegistrationParameterScalesFromPhysicalShiftType;
+      using RegistrationParameterScalesFromPhysicalShiftType = itk::RegistrationParameterScalesFromPhysicalShift<GCMetricType>;
       typename RegistrationParameterScalesFromPhysicalShiftType::Pointer
       shiftScaleEstimator =
       RegistrationParameterScalesFromPhysicalShiftType::New();

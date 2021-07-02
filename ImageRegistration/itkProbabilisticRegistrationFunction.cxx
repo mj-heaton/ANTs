@@ -15,7 +15,7 @@
 #define _itkProbabilisticRegistrationFunction_hxx_
 
 #include "itkProbabilisticRegistrationFunction.h"
-#include "itkExceptionObject.h"
+#include "itkMacro.h"
 #include "itkMath.h"
 #include "itkImageFileWriter.h"
 #include "itkDiscreteGaussianImageFilter.h"
@@ -121,12 +121,12 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
   this->m_Energy = 0.0;
 
   // compute the normalizer
-  m_Normalizer      = 0.0;
+  m_Normalizer      = itk::NumericTraits<float>::ZeroValue();
   for( unsigned int k = 0; k < ImageDimension; k++ )
     {
-    m_Normalizer += m_FixedImageSpacing[k] * m_FixedImageSpacing[k];
+    m_Normalizer += static_cast<float>( itk::Math::sqr( m_FixedImageSpacing[k] ) );
     }
-  m_Normalizer /= static_cast<double>( ImageDimension );
+  m_Normalizer /= static_cast<float>( ImageDimension );
 
   bool makeimg = false;
   if( m_Iteration == 0 )
@@ -225,7 +225,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
           IndexType index = hoodIt.GetIndex( indct );
 
           if( !isInBounds || ( this->m_FixedImageMask &&
-                               this->m_FixedImageMask->GetPixel( index ) < 0.25 ) )
+                               this->m_FixedImageMask->GetPixel( index ) < static_cast<typename FixedImageType::PixelType>( 0.25 ) ) )
             {
             continue;
             }
@@ -238,7 +238,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
           suma += a;
           sumb += b;
           sumab += a * b;
-          count += 1.0;
+          count += itk::NumericTraits<float>::OneValue();
           }
 
         Qsuma2.push_back( suma2 );
@@ -332,7 +332,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
             IndexType index = hoodIt.GetIndex( indct );
 
             if( !isInBounds || ( this->m_FixedImageMask &&
-                                 this->m_FixedImageMask->GetPixel( index ) < 0.25 ) )
+                                 this->m_FixedImageMask->GetPixel( index ) < static_cast<typename FixedImageType::PixelType>( 0.25 ) ) )
               {
               continue;
               }
@@ -345,7 +345,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
             suma += a;
             sumb += b;
             sumab += a * b;
-            count += 1.0;
+            count += itk::NumericTraits<float>::OneValue();
             }
 
           Qsuma2.push_back( suma2 );
@@ -417,7 +417,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
           IndexType index = hoodIt.GetIndex( indct );
 
           if( !isInBounds || ( this->m_FixedImageMask &&
-                               this->m_FixedImageMask->GetPixel( index ) < 0.25 ) )
+                               this->m_FixedImageMask->GetPixel( index ) < static_cast<typename FixedImageType::PixelType>( 0.25 ) ) )
             {
             continue;
             }
@@ -430,7 +430,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
           suma += a;
           sumb += b;
           sumab += a * b;
-          count += 1.0;
+          count += itk::NumericTraits<float>::OneValue();
           }
 
         Qsuma2.push_back( suma2 );
@@ -524,7 +524,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
             IndexType index = hoodIt.GetIndex( indct );
 
             if( !isInBounds || ( this->m_FixedImageMask &&
-                                 this->m_FixedImageMask->GetPixel( index ) < 0.25 ) )
+                                 this->m_FixedImageMask->GetPixel( index ) < static_cast<typename FixedImageType::PixelType>( 0.25 ) ) )
               {
               continue;
               }
@@ -537,7 +537,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
             suma += a;
             sumb += b;
             sumab += a * b;
-            count += 1.0;
+            count += itk::NumericTraits<float>::OneValue();
             }
 
           Qsuma2.push_back( suma2 );
@@ -595,12 +595,12 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
   this->m_Energy = 0.0;
 
   // compute the normalizer
-  m_Normalizer      = 0.0;
+  m_Normalizer      = itk::NumericTraits<float>::ZeroValue();
   for( unsigned int k = 0; k < ImageDimension; k++ )
     {
     m_Normalizer += m_FixedImageSpacing[k] * m_FixedImageSpacing[k];
     }
-  m_Normalizer /= static_cast<double>( ImageDimension );
+  m_Normalizer /= static_cast<float>( ImageDimension );
 
   typename FixedImageType::SpacingType spacing = this->GetFixedImage()->GetSpacing();
 
@@ -707,11 +707,11 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
 
       if( cter > 0 )
         {
-        movingMean = sumj / (float)cter;
+        movingMean = sumj / static_cast<double>( cter );
         }
       if( cter > 0 )
         {
-        fixedMean = sumi / (float)cter;
+        fixedMean = sumi / static_cast<double>( cter );
         }
 
       float val = this->GetFixedImage()->GetPixel(oindex) - fixedMean;
@@ -798,7 +798,8 @@ typename TDisplacementField::PixelType
 ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
 ::ComputeMetricAtPairB(IndexType oindex, typename TDisplacementField::PixelType /* vec */)
 {
-  typename TDisplacementField::PixelType deriv;
+  using DisplacementFieldVectorType = typename TDisplacementField::PixelType;
+  DisplacementFieldVectorType deriv;
   deriv.Fill(0.0);
   double sff = 0.0;
   double smm = 0.0;
@@ -806,7 +807,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
   CovariantVectorType gradI;
   if( this->m_FixedImageMask )
     {
-    if( this->m_FixedImageMask->GetPixel( oindex ) < 0.25 )
+    if( this->m_FixedImageMask->GetPixel( oindex ) < static_cast<typename FixedImageType::PixelType>( 0.25 ) )
       {
       return deriv;
       }
@@ -816,20 +817,20 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
   sff = finitediffimages[3]->GetPixel(oindex);
   smm = finitediffimages[4]->GetPixel(oindex);
 
-  if( sff == 0.0 || smm == 0.0 )
+  if( itk::Math::FloatAlmostEqual( sff, itk::NumericTraits<double>::ZeroValue() ) || itk::Math::FloatAlmostEqual( smm, itk::NumericTraits<double>::ZeroValue() ) )
     {
     return deriv;
     }
 
   IndexType index = oindex;  // hoodIt.GetIndex(indct);
 //      bool inimage=true;
-  if( sff == 0.0 )
+  if( itk::Math::FloatAlmostEqual( sff, itk::NumericTraits<double>::ZeroValue() ) )
     {
-    sff = 1.0;
+    sff = itk::NumericTraits<double>::OneValue();
     }
-  if( smm == 0.0 )
+  if( itk::Math::FloatAlmostEqual( smm, itk::NumericTraits<double>::ZeroValue() ) )
     {
-    smm = 1.0;
+    smm = itk::NumericTraits<double>::OneValue();
     }
   gradI = m_FixedImageGradientCalculator->EvaluateAtIndex( index );
   //    gradJ = m_MovingImageGradientCalculator->EvaluateAtIndex( index );
@@ -837,22 +838,23 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
   float Ji = finitediffimages[1]->GetPixel(index);
   float Ii = finitediffimages[0]->GetPixel(index);
 
-  m_TEMP = 2.0 * sfm / (sff * smm) * ( Ji - sfm / sff * Ii );
+  m_TEMP = 2.0 * sfm / (sff * smm) * ( static_cast<double>( Ji ) - sfm / sff * static_cast<double>( Ii ) );
   for( unsigned int qq = 0; qq < ImageDimension; qq++ )
     {
-    deriv[qq]   -= 2.0 * sfm / (sff * smm) * ( Ji - sfm / sff * Ii ) * gradI[qq];
+    deriv[qq]   -= static_cast<typename DisplacementFieldVectorType::ComponentType>(
+       2.0 * sfm / (sff * smm) * ( static_cast<double>( Ji ) - sfm / sff * static_cast<double>( Ii ) ) * gradI[qq] );
     //        derivinv[qq]-=2.0*sfm/(sff*smm)*( Ii - sfm/smm*Ji )*gradJ[qq];
     }
 
-  if( sff * smm != 0.0 )
+  if( ! itk::Math::FloatAlmostEqual( sff * smm, itk::NumericTraits<double>::ZeroValue() ) )
     {
     localProbabilistic = sfm * sfm / ( sff * smm );
     }
   else
     {
-    localProbabilistic = 1.0;
+    localProbabilistic = itk::NumericTraits<double>::OneValue();
     }
-  if( localProbabilistic * (-1.0) < this->m_RobustnessParameter )
+  if( -localProbabilistic < static_cast<double>( this->m_RobustnessParameter ) )
     {
     deriv.Fill(0);
     }
@@ -880,7 +882,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
   CovariantVectorType gradJ;
   if( this->m_FixedImageMask )
     {
-    if( this->m_FixedImageMask->GetPixel( oindex ) < 0.25 )
+    if( this->m_FixedImageMask->GetPixel( oindex ) < static_cast<typename FixedImageType::PixelType>( 0.25 ) )
       {
       return deriv;
       }
@@ -890,19 +892,19 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
   sff = finitediffimages[3]->GetPixel(oindex);
   smm = finitediffimages[4]->GetPixel(oindex);
 
-  if( sff == 0.0 || smm == 0.0 )
+  if( itk::Math::FloatAlmostEqual( sff, itk::NumericTraits<double>::ZeroValue() ) || itk::Math::FloatAlmostEqual( smm, itk::NumericTraits<double>::ZeroValue() ) )
     {
     return deriv;
     }
 
   IndexType index = oindex; // hoodIt.GetIndex(indct);
-  if( sff == 0.0 )
+   if( itk::Math::FloatAlmostEqual( sff, itk::NumericTraits<double>::ZeroValue() ) )
     {
-    sff = 1.0;
+    sff = itk::NumericTraits<double>::OneValue();
     }
-  if( smm == 0.0 )
+  if( itk::Math::FloatAlmostEqual( smm, itk::NumericTraits<double>::ZeroValue() ) )
     {
-    smm = 1.0;
+    smm = itk::NumericTraits<double>::OneValue();
     }
 
   // /gradI = m_FixedImageGradientCalculator->EvaluateAtIndex( index );
@@ -913,10 +915,10 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
   for( unsigned int qq = 0; qq < ImageDimension; qq++ )
     {
     // deriv[qq]   -=2.0*sfm/(sff*smm)*( Ji - sfm/sff*Ii )*gradI[qq];
-    deriv[qq] -= 2.0 * sfm / (sff * smm) * ( Ii - sfm / smm * Ji ) * gradJ[qq];
+    deriv[qq] -= static_cast<float>( 2.0 * sfm / (sff * smm) * ( static_cast<double>( Ii ) - sfm / smm * static_cast<double>( Ji ) ) * gradJ[qq] );
     }
 
-  if( sff * smm != 0.0 )
+  if( ! itk::Math::FloatAlmostEqual( sff * smm, itk::NumericTraits<double>::ZeroValue() ) )
     {
     localProbabilistic = sfm * sfm / ( sff * smm );
     }
@@ -924,7 +926,7 @@ ProbabilisticRegistrationFunction<TFixedImage, TMovingImage, TDisplacementField>
     {
     localProbabilistic = 1.0;
     }
-  if( localProbabilistic * (-1.0) < this->m_RobustnessParameter )
+  if( localProbabilistic < -static_cast<double>( this->m_RobustnessParameter ) )
     {
     deriv.Fill(0);
     }

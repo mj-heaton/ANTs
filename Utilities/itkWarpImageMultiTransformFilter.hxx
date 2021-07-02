@@ -129,35 +129,6 @@ WarpImageMultiTransformFilter<TInputImage, TOutputImage, TDisplacementField, TTr
 }
 
 /**
- * Set the output image spacing.
- *
- */
-template <typename TInputImage, typename TOutputImage, typename TDisplacementField, typename TTransform>
-void
-WarpImageMultiTransformFilter<TInputImage, TOutputImage, TDisplacementField, TTransform>
-::SetOutputSpacing( const double* spacing)
-{
-  SpacingType s(spacing);
-
-  this->SetOutputSpacing( s );
-}
-
-/**
- * Set the output image origin.
- *
- */
-template <typename TInputImage, typename TOutputImage, typename TDisplacementField, typename TTransform>
-void
-WarpImageMultiTransformFilter<TInputImage, TOutputImage, TDisplacementField, TTransform>
-::SetOutputOrigin(
-  const double* origin)
-{
-  PointType p(origin);
-
-  this->SetOutputOrigin(p);
-}
-
-/**
  * Setup state of filter before multi-threading.
  * InterpolatorType::SetInputImage is not thread-safe and hence
  * has to be setup before ThreadedGenerateData
@@ -441,7 +412,7 @@ WarpImageMultiTransformFilter<TInputImage, TOutputImage, TDisplacementField, TTr
 
   for( unsigned int i = 0; i < ImageDimension; i++ )
     {
-    if( p[i] >= kMaxDisp )
+    if( p[i] >= static_cast<double>( kMaxDisp ) )
       {
       b = true;
       break;
@@ -565,7 +536,7 @@ WarpImageMultiTransformFilter<TInputImage, TOutputImage, TDisplacementField, TTr
           DisplacementType displacement = fieldPtr->GetPixel(index);
           for( unsigned int j = 0; j < ImageDimension; j++ )
             {
-            point2[j] = point1[j] + displacement[j];
+            point2[j] = point1[j] + static_cast<double>( displacement[j] );
             }
           isinside = true;
           }

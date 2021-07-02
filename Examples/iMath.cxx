@@ -60,44 +60,6 @@ std::string ants_to_string(T t)
   return istream.str();
 }
 
-std::string ANTSOptionName(const char *str)
-{
-  std::string            filename = str;
-  std::string::size_type pos = filename.rfind( "=" );
-  std::string            name = std::string( filename, 0, pos );
-
-  return name;
-}
-
-std::string ANTSOptionValue(const char *str)
-{
-  std::string            filename = str;
-  std::string::size_type pos = filename.rfind( "=" );
-  std::string            value = std::string( filename, pos + 1, filename.length() );
-
-  return value;
-}
-
-std::string ANTSGetFilePrefix(const char *str)
-{
-  const std::string      filename = str;
-  std::string::size_type pos = filename.rfind( "." );
-  std::string            filepre = std::string( filename, 0, pos );
-
-#if 0 // HACK:  This does nothing useful
-  if( pos != std::string::npos )
-    {
-    std::string extension = std::string( filename, pos, filename.length() - 1);
-    if( extension == std::string(".gz") )
-      {
-      pos = filepre.rfind( "." );
-      // extension = std::string( filepre, pos, filepre.length() - 1 );
-      }
-    }
-#endif
-  return filepre;
-}
-
 //
 // iMath was a gigantic switch statement that had 3 duplicated
 // lists of 'if (operation == <op>)' clauses for 2d, 3d, and 4d. I
@@ -164,10 +126,10 @@ iMathHelperAll(int argc, char **argv)
   std::string inName = std::string(argv[4]);
   std::string outName = std::string(argv[2]);
 
-  typedef float PixelType;
+  using PixelType = float;
   if( operation == "BlobDetector" )
     {
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -201,7 +163,7 @@ iMathHelperAll(int argc, char **argv)
     }
   else if( operation == "Canny" )
     {
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -238,7 +200,7 @@ iMathHelperAll(int argc, char **argv)
   else if( operation == "DistanceMap" )
     {
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -272,7 +234,7 @@ iMathHelperAll(int argc, char **argv)
   else if( operation == "FillHoles" )
     {
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -312,7 +274,7 @@ iMathHelperAll(int argc, char **argv)
       radius = std::stoi(argv[5]);
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -345,7 +307,7 @@ iMathHelperAll(int argc, char **argv)
       radius = std::stoi(argv[5]);
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -378,7 +340,7 @@ iMathHelperAll(int argc, char **argv)
       radius = std::stoi(argv[5]);
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -411,7 +373,7 @@ iMathHelperAll(int argc, char **argv)
       radius = std::stoi(argv[5]);
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -443,7 +405,7 @@ iMathHelperAll(int argc, char **argv)
       minSize = std::stoi( argv[5] );
     }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -481,7 +443,7 @@ iMathHelperAll(int argc, char **argv)
       normalize = (bool) std::stoi(argv[6]);
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -507,7 +469,7 @@ iMathHelperAll(int argc, char **argv)
     }
   else if( operation == "HistogramEqualization" )
     {
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
     float alpha = 0;
@@ -556,7 +518,7 @@ iMathHelperAll(int argc, char **argv)
       normalize = (bool) std::stoi(argv[6]);
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -624,7 +586,7 @@ iMathHelperAll(int argc, char **argv)
       includeCenter = ( std::stoi(argv[10])==1 );
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -692,7 +654,7 @@ iMathHelperAll(int argc, char **argv)
       includeCenter = ( std::stoi(argv[10])==1 );
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -759,7 +721,7 @@ iMathHelperAll(int argc, char **argv)
       includeCenter = ( std::stoi(argv[10])==1 );
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -826,7 +788,7 @@ iMathHelperAll(int argc, char **argv)
       includeCenter = ( std::stoi(argv[10])==1 );
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -860,7 +822,7 @@ iMathHelperAll(int argc, char **argv)
       foreground = (PixelType) atof(argv[5]);
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -886,7 +848,7 @@ iMathHelperAll(int argc, char **argv)
     }
   else if( operation == "Normalize" )
     {
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -915,7 +877,7 @@ iMathHelperAll(int argc, char **argv)
 
     int padding = std::stoi(argv[5]);
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -953,7 +915,7 @@ iMathHelperAll(int argc, char **argv)
       conductance = (PixelType) atof(argv[6]);
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -979,7 +941,7 @@ iMathHelperAll(int argc, char **argv)
     }
   else if( operation == "Sharpen" )
     {
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 
@@ -1005,7 +967,7 @@ iMathHelperAll(int argc, char **argv)
     }
   else if (operation == "PropagateLabelsThroughMask" )
     {
-    typedef itk::Image<float,DIM>  ImageType;
+    using ImageType = itk::Image<float, DIM>;
 
     if ( argc < 6 ) {
       std::cerr << "PropogateLabelsThroughMask needs a mask and an image of labels" << std::endl;
@@ -1046,8 +1008,8 @@ iMathHelperAll(int argc, char **argv)
     }
   else if( operation == "TruncateIntensity" )
     {
-    typedef itk::Image<float,DIM>         ImageType;
-    typedef itk::Image<unsigned int,DIM>           MaskType;
+    using ImageType = itk::Image<float, DIM>;
+    using MaskType = itk::Image<unsigned int, DIM>;
     int nBins = iMathTruncateIntensityNBins;
     if ( argc < 7 )
       {
@@ -1069,7 +1031,7 @@ iMathHelperAll(int argc, char **argv)
       ReadImage<MaskType>( mask, argv[8] );
       }
 
-    typedef itk::Image<float,DIM> ImageType;
+    using ImageType = itk::Image<float, DIM>;
     typename ImageType::Pointer input = nullptr;
     typename ImageType::Pointer output = nullptr;
 

@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10.2...3.14.2)
+cmake_policy(VERSION 3.10.2...3.14.2)
 
 if(CMAKE_CXX_STANDARD EQUAL "98" )
    message(FATAL_ERROR "CMAKE_CXX_STANDARD:STRING=98 is not supported in ITK version 5 and greater.")
@@ -28,18 +29,6 @@ foreach(p
   endif()
 endforeach()
 
-option(ANTS_BUILD_WITH_CCACHE "Build ${LOCAL_PROJECT_NAME} using ccache if available." ON)
-mark_as_advanced(ANTS_BUILD_WITH_CCACHE)
-if(ANTS_BUILD_WITH_CCACHE)
-  find_program(CCACHE_PROGRAM ccache)
-  if(CCACHE_PROGRAM)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-  endif()
-endif()
-
-set(LIBRARY_SOVERSION_INFO 3)
-set(LIBRARY_VERSION_INFO 3.0.0)
-
 set(LOCAL_PROJECT_NAME ANTS)
 include(InstallRequiredSystemLibraries)
 ## NOTE THERE SHOULD BE NO PROJECT STATEMENT HERE!
@@ -67,12 +56,12 @@ mark_as_advanced(${LOCAL_PROJECT_NAME}_USE_QT)
 option(${LOCAL_PROJECT_NAME}_INSTALL_DEVELOPMENT "Install development support include and libraries for external packages." OFF)
 mark_as_advanced(${LOCAL_PROJECT_NAME}_INSTALL_DEVELOPMENT)
 
-option(COPY_SCRIPT_FILES_TO_BIN_DIR "Copy the script files to the ANTS bin directory." OFF)
-mark_as_advanced(COPY_SCRIPT_FILES_TO_BIN_DIR)
-
 #-----------------------------------------------------------------------------
 # Superbuild script
 #-----------------------------------------------------------------------------
+SET(CMAKE_INSTALL_PREFIX /opt/ANTs CACHE PATH "Default ANTs install path")
+SET(SUPERBUILD_STAGING_PREFIX ${CMAKE_BINARY_DIR}/external)
+
 if(${LOCAL_PROJECT_NAME}_SUPERBUILD)
   project(SuperBuild_${LOCAL_PROJECT_NAME})
   include("${CMAKE_CURRENT_SOURCE_DIR}/SuperBuild.cmake")
@@ -80,7 +69,6 @@ if(${LOCAL_PROJECT_NAME}_SUPERBUILD)
   return()
 else()
   project(${LOCAL_PROJECT_NAME}
-    VERSION 3.0.0.0
     DESCRIPTION "Advanced Normalization Tools (ANTs)"
     LANGUAGES CXX C)
   include("${CMAKE_CURRENT_SOURCE_DIR}/${LOCAL_PROJECT_NAME}.cmake")

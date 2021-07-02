@@ -39,7 +39,7 @@ namespace itk
  * \ingroup ITKImageScaleSpace
  **/
 template <unsigned int TDimension = 3>
-class ScaleSpaceBlobSpatialObject
+class ScaleSpaceBlobSpatialObject final
   : public GaussianSpatialObject<TDimension>
 {
 public:
@@ -67,13 +67,13 @@ public:
   /** The radius of the object if it is a solid hyper-sphere */
   double GetObjectRadius( void ) const
   {
-    return this->GetSigma() *  itk::Math::sqrt2;
+    return this->GetSigmaInObjectSpace() *  itk::Math::sqrt2;
   }
 
   /** The sigma of the laplacian where the extrema occoured */
   double GetScaleSpaceSigma( void ) const
   {
-    return this->GetSigma() / ( std::sqrt( TDimension / 2.0 ) );
+    return this->GetSigmaInObjectSpace() / ( std::sqrt( TDimension / 2.0 ) );
   }
 
   /** The location where the extrema occoured */
@@ -103,7 +103,7 @@ private:
  * \author Bradley Lowekamp
 */
 template <typename TInputImage>
-class MultiScaleLaplacianBlobDetectorImageFilter
+class MultiScaleLaplacianBlobDetectorImageFilter final
   : public       ImageToImageFilter<TInputImage, TInputImage>
 {
 public:

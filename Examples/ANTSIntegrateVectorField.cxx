@@ -28,11 +28,11 @@ typename TImage::Pointer
 GetVectorComponent(typename TField::Pointer field, unsigned int index)
 {
   // Initialize the Moving to the displacement field
-  typedef TImage ImageType;
+  using ImageType = TImage;
 
   typename ImageType::Pointer sfield = AllocImage<ImageType>(field);
 
-  typedef itk::ImageRegionIteratorWithIndex<TField> Iterator;
+  using Iterator = itk::ImageRegionIteratorWithIndex<TField>;
   Iterator vfIter( field,  field->GetLargestPossibleRegion() );
   for( vfIter.GoToBegin(); !vfIter.IsAtEnd(); ++vfIter )
     {
@@ -48,7 +48,7 @@ typename TImage::Pointer
 SmoothImage(typename TImage::Pointer image, float sig)
 {
 // find min value
-  typedef itk::ImageRegionIteratorWithIndex<TImage> Iterator;
+  using Iterator = itk::ImageRegionIteratorWithIndex<TImage>;
   Iterator vfIter(image, image->GetLargestPossibleRegion() );
   for( vfIter.GoToBegin(); !vfIter.IsAtEnd(); ++vfIter )
     {
@@ -58,7 +58,7 @@ SmoothImage(typename TImage::Pointer image, float sig)
       vfIter.Set(0);
       }
     }
-  typedef itk::DiscreteGaussianImageFilter<TImage, TImage> dgf;
+  using dgf = itk::DiscreteGaussianImageFilter<TImage, TImage>;
   typename dgf::Pointer filter = dgf::New();
   filter->SetVariance(sig);
   filter->SetUseImageSpacingOn();
@@ -74,8 +74,8 @@ template <typename TImage>
 void
 SmoothDeformation(typename TImage::Pointer vectorimage, float sig)
 {
-  typedef itk::Vector<float, 3> VectorType;
-  typedef itk::Image<float, 3>  ImageType;
+  using VectorType = itk::Vector<float, 3>;
+  using ImageType = itk::Image<float, 3>;
   typename ImageType::Pointer subimgx = GetVectorComponent<TImage, ImageType>(vectorimage, 0);
   subimgx = SmoothImage<ImageType>(subimgx, sig);
   typename ImageType::Pointer subimgy = GetVectorComponent<TImage, ImageType>(vectorimage, 1);
@@ -83,7 +83,7 @@ SmoothDeformation(typename TImage::Pointer vectorimage, float sig)
   typename ImageType::Pointer subimgz = GetVectorComponent<TImage, ImageType>(vectorimage, 2);
   subimgz = SmoothImage<ImageType>(subimgz, sig);
 
-  typedef itk::ImageRegionIteratorWithIndex<TImage> IteratorType;
+  using IteratorType = itk::ImageRegionIteratorWithIndex<TImage>;
   IteratorType Iterator( vectorimage, vectorimage->GetLargestPossibleRegion().GetSize() );
   Iterator.GoToBegin();
   while(  !Iterator.IsAtEnd()  )
@@ -96,8 +96,7 @@ SmoothDeformation(typename TImage::Pointer vectorimage, float sig)
     ++Iterator;
     }
 
-  return;
-}
+  }
 
 template <typename TImage, typename TField, typename TInterp, typename TInterp2>
 float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointer /* thickimage */,
@@ -105,9 +104,9 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
                        float starttime, const float deltaTime, typename TInterp::Pointer vinterp,
                        typename TImage::SpacingType spacing, float vecsign, float timesign, float gradsign )
 {
-  typedef typename TField::PixelType                               VectorType;
-  typedef typename TField::PointType                               DPointType;
-  typedef itk::VectorLinearInterpolateImageFunction<TField, float> DefaultInterpolatorType;
+  using VectorType = typename TField::PixelType;
+  using DPointType = typename TField::PointType;
+  using DefaultInterpolatorType = itk::VectorLinearInterpolateImageFunction<TField, float>;
 
   VectorType zero;
   zero.Fill(0);
@@ -119,7 +118,7 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
   typename DefaultInterpolatorType::ContinuousIndexType  vcontind;
   DPointType pointIn3;
   enum { ImageDimension = TImage::ImageDimension };
-  typedef typename TImage::IndexType IndexType;
+  using IndexType = typename TImage::IndexType;
   unsigned int m_NumberOfTimePoints = 2;
   for( unsigned int jj = 0; jj < ImageDimension; jj++ )
     {
@@ -132,8 +131,8 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
     {
     float scale = 1;  // *m_DT[timeind]/m_DS[timeind];
     //     std::cout << " scale " << scale << std::endl;
-    double itimetn1 = itime - timesign * deltaTime * scale;
-    double itimetn1h = itime - timesign * deltaTime * 0.5 * scale;
+    auto itimetn1 = static_cast<double>( itime - timesign * deltaTime * scale );
+    auto itimetn1h = static_cast<double>( itime - timesign * deltaTime * 0.5f * scale );
     if( itimetn1h < 0 )
       {
       itimetn1h = 0;
@@ -161,13 +160,15 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
     typename DefaultInterpolatorType::OutputType f2;  f2.Fill(0);
     typename DefaultInterpolatorType::OutputType f3;  f3.Fill(0);
     typename DefaultInterpolatorType::OutputType f4;  f4.Fill(0);
-    typename DefaultInterpolatorType::ContinuousIndexType  Y1;
-    typename DefaultInterpolatorType::ContinuousIndexType  Y2;
-    typename DefaultInterpolatorType::ContinuousIndexType  Y3;
-    typename DefaultInterpolatorType::ContinuousIndexType  Y4;
+
+    using ContinuousIndexType = typename DefaultInterpolatorType::ContinuousIndexType;
+    ContinuousIndexType  Y1;
+    ContinuousIndexType  Y2;
+    ContinuousIndexType  Y3;
+    ContinuousIndexType  Y4;
     for( unsigned int jj = 0; jj < ImageDimension; jj++ )
       {
-      pointIn2[jj] = disp[jj] + pointIn1[jj];
+      pointIn2[jj] = static_cast<typename DPointType::CoordRepType>( disp[jj] ) + pointIn1[jj];
       vcontind[jj] = pointIn2[jj] / lapgrad->GetSpacing()[jj];
       Y1[jj] = vcontind[jj];
       Y2[jj] = vcontind[jj];
@@ -182,7 +183,7 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
     f1 = vinterp->EvaluateAtContinuousIndex( Y1 );
     for( unsigned int jj = 0; jj < ImageDimension; jj++ )
       {
-      Y2[jj] += f1[jj] * deltaTime * 0.5;
+      Y2[jj] += static_cast<typename ContinuousIndexType::CoordRepType>( static_cast<float>( f1[jj] ) * deltaTime * 0.5f );
       }
     bool isinside = true;
     for( unsigned int jj = 0; jj < ImageDimension; jj++ )
@@ -198,7 +199,7 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
       }
     for( unsigned int jj = 0; jj < ImageDimension; jj++ )
       {
-      Y3[jj] += f2[jj] * deltaTime * 0.5;
+      Y3[jj] += static_cast<typename ContinuousIndexType::CoordRepType>( static_cast<float>( f2[jj] ) * deltaTime * 0.5f );
       }
     isinside = true;
     for( unsigned int jj = 0; jj < ImageDimension; jj++ )
@@ -214,7 +215,7 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
       }
     for( unsigned int jj = 0; jj < ImageDimension; jj++ )
       {
-      Y4[jj] += f3[jj] * deltaTime;
+      Y4[jj] += static_cast<typename ContinuousIndexType::CoordRepType>( static_cast<float>( f3[jj] ) * deltaTime );
       }
     isinside = true;
     for( unsigned int jj = 0; jj < ImageDimension; jj++ )
@@ -228,10 +229,13 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
       {
       f4 = vinterp->EvaluateAtContinuousIndex( Y4 );
       }
+    using DPointCoordRepType = typename DPointType::CoordRepType;
+    auto twoValue = static_cast<DPointCoordRepType>( 2.0 );
     for( unsigned int jj = 0; jj < ImageDimension; jj++ )
       {
-      pointIn3[jj] = pointIn2[jj] + gradsign * vecsign * deltaTime / 6.0
-        * ( f1[jj] + 2.0 * f2[jj] + 2.0 * f3[jj] + f4[jj] );
+      pointIn3[jj] = pointIn2[jj] + static_cast<DPointCoordRepType>( gradsign * vecsign * deltaTime / 6.0f )
+        * ( static_cast<DPointCoordRepType>( f1[jj] ) + twoValue * static_cast<DPointCoordRepType>( f2[jj] )
+        + twoValue * static_cast<DPointCoordRepType>( f3[jj] ) + static_cast<DPointCoordRepType>( f4[jj] ) );
       }
 
     VectorType out;
@@ -239,14 +243,14 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
     for( unsigned int jj = 0; jj < ImageDimension; jj++ )
       {
       out[jj] = pointIn3[jj] - pointIn1[jj];
-      mag += (pointIn3[jj] - pointIn2[jj]) * (pointIn3[jj] - pointIn2[jj]);
-      voxmag += (pointIn3[jj] - pointIn2[jj]) / spacing[jj] * (pointIn3[jj] - pointIn2[jj]) / spacing[jj];
-      dmag += (pointIn3[jj] - pointIn1[jj]) * (pointIn3[jj] - pointIn1[jj]);
+      mag += static_cast<float>( itk::Math::sqr(pointIn3[jj] - pointIn2[jj]) );
+      dmag += static_cast<float>( itk::Math::sqr(pointIn3[jj] - pointIn1[jj]) );
+      voxmag += static_cast<float>( itk::Math::sqr( ( pointIn3[jj] - pointIn2[jj] ) / spacing[jj] ) );
       disp[jj] = out[jj];
       }
-    voxmag = sqrt(voxmag);
-    dmag = sqrt(dmag);
-    totalmag += sqrt(mag);
+    voxmag = static_cast<float>( std::sqrt(voxmag) );
+    dmag = static_cast<float>( std::sqrt(dmag) );
+    totalmag += static_cast<float>( std::sqrt(mag) );
 
     ct++;
     //      if (!propagate) //thislength=dmag;//
@@ -266,7 +270,7 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
       {
       std::cout << " stopping b/c exceed 1000 points " << voxmag <<  std::endl;  timedone = true;
       }
-    if( voxmag < 0.1 )
+    if( voxmag < 0.1f )
       {
       timedone = true;
       }
@@ -278,14 +282,14 @@ float IntegrateLength( typename TImage::Pointer gmsurf,  typename TImage::Pointe
 template <unsigned int ImageDimension>
 int IntegrateVectorField(int argc, char *argv[])
 {
-  typedef float                                  PixelType;
-  typedef itk::Vector<float, ImageDimension>     VectorType;
-  typedef itk::Image<VectorType, ImageDimension> DisplacementFieldType;
-  typedef itk::Image<PixelType, ImageDimension>  ImageType;
-  typedef typename  ImageType::SpacingType       SpacingType;
+  using PixelType = float;
+  using VectorType = itk::Vector<float, ImageDimension>;
+  using DisplacementFieldType = itk::Image<VectorType, ImageDimension>;
+  using ImageType = itk::Image<PixelType, ImageDimension>;
+  using SpacingType = typename ImageType::SpacingType;
 
   constexpr float deltaTime = 0.001;
-  float       gradstep = 1. / deltaTime; // atof(argv[3])*(-1.0);
+  float       gradstep = 1.f / deltaTime; // atof(argv[3])*(-1.0);
   std::string vectorfn = std::string(argv[1]);
   std::string roifn = std::string(argv[2]);
   int         argct = 3;
@@ -298,7 +302,7 @@ int IntegrateVectorField(int argc, char *argv[])
   argct++;
   if( argc > argct )
     {
-    gradstep *= atof(argv[argct]);
+    gradstep *= static_cast<float>(atof(argv[argct]));
     }
   argct++;
 
@@ -310,7 +314,7 @@ int IntegrateVectorField(int argc, char *argv[])
   typename DisplacementFieldType::Pointer VECimage;
   ReadImage<DisplacementFieldType>(VECimage, vectorfn.c_str() );
   SpacingType spacing = ROIimage->GetSpacing();
-  typedef itk::ImageRegionIteratorWithIndex<ImageType> IteratorType;
+  using IteratorType = itk::ImageRegionIteratorWithIndex<ImageType>;
   IteratorType Iterator( ROIimage, ROIimage->GetLargestPossibleRegion().GetSize() );
 
   double timezero = 0;         // 1
@@ -324,15 +328,15 @@ int IntegrateVectorField(int argc, char *argv[])
     {
     timesign = -1.0;
     }
-  typedef   DisplacementFieldType                                                        TimeVaryingVelocityFieldType;
-  typedef typename DisplacementFieldType::PointType                                      DPointType;
-  typedef itk::VectorLinearInterpolateImageFunction<TimeVaryingVelocityFieldType, float> DefaultInterpolatorType;
+  using TimeVaryingVelocityFieldType = DisplacementFieldType;
+  //UNUSED: typedef typename DisplacementFieldType::PointType                                      DPointType;
+  using DefaultInterpolatorType = itk::VectorLinearInterpolateImageFunction<TimeVaryingVelocityFieldType, float>;
   typename DefaultInterpolatorType::Pointer vinterp =  DefaultInterpolatorType::New();
-  typedef itk::LinearInterpolateImageFunction<ImageType, float> ScalarInterpolatorType;
+  using ScalarInterpolatorType = itk::LinearInterpolateImageFunction<ImageType, float>;
   VectorType zero;
   zero.Fill(0);
 
-  typedef itk::ImageRegionIteratorWithIndex<DisplacementFieldType> VIteratorType;
+  using VIteratorType = itk::ImageRegionIteratorWithIndex<DisplacementFieldType>;
   VIteratorType VIterator( VECimage, VECimage->GetLargestPossibleRegion().GetSize() );
   VIterator.GoToBegin();
   while(  !VIterator.IsAtEnd()  )
@@ -359,7 +363,7 @@ int IntegrateVectorField(int argc, char *argv[])
     float      itime = starttime;
     VectorType disp;
     disp.Fill(0.0);
-    if( ROIimage->GetPixel(velind) == 2 )
+    if( itk::Math::FloatAlmostEqual( ROIimage->GetPixel(velind), static_cast<PixelType>( 2 ) ) )
       {
       vinterp->SetInputImage(VECimage);
       float gradsign = -1.0;
@@ -459,7 +463,7 @@ private:
 
   std::string               ifn = std::string(argv[1]);
   itk::ImageIOBase::Pointer imageIO =
-    itk::ImageIOFactory::CreateImageIO(ifn.c_str(), itk::ImageIOFactory::ReadMode);
+    itk::ImageIOFactory::CreateImageIO(ifn.c_str(), itk::ImageIOFactory::FileModeEnum::ReadMode);
   imageIO->SetFileName(ifn.c_str() );
   imageIO->ReadImageInformation();
   unsigned int dim =  imageIO->GetNumberOfDimensions();

@@ -32,7 +32,7 @@ namespace itk
 template <typename TInputImage,
   typename TMaskImage = Image<unsigned char, TInputImage::ImageDimension>,
   class TOutputImage = TInputImage>
-class MaskedSmoothingImageFilter :
+class MaskedSmoothingImageFilter final :
   public ImageToImageFilter<TInputImage, TOutputImage>
 {
 public:
@@ -106,7 +106,11 @@ public:
   /**
    * Set/Get the time point values.  Default = no special value.
    */
-  itkSetMacro( TimePoints, std::vector<RealType>  );
+  void SetTimePoints( std::vector<RealType> timePoints )
+    {
+    this->m_TimePoints = timePoints;
+    this->Modified();
+    }
   itkGetConstMacro( TimePoints, std::vector<RealType>  );
 
 protected:

@@ -60,7 +60,7 @@ namespace itk
  *     can reconstruct it using the class itkBSplineControlPointImageFilter.
  *     See the IJ article and the test file for an example.
  *  5. The 'Z' parameter in Sled's 1998 paper is the square root
- *     of the class variable 'm_WeinerFilterNoise'.
+ *     of the class variable 'm_WienerFilterNoise'.
  *
  * \author Nicholas J. Tustison
  *
@@ -85,7 +85,7 @@ namespace itk
 
 template <typename TInputImage, typename TBiasFieldImage, typename TMaskImage,
           typename TConfidenceImage>
-class N3BiasFieldScaleCostFunction
+class N3BiasFieldScaleCostFunction final
   : public       SingleValuedCostFunction
 {
 public:
@@ -134,7 +134,7 @@ private:
 template <typename TInputImage, typename TMaskImage = Image<unsigned char,
                                                       TInputImage::ImageDimension>,
           class TOutputImage = TInputImage>
-class N3MRIBiasFieldCorrectionImageFilter :
+class N3MRIBiasFieldCorrectionImageFilter final :
   public         ImageToImageFilter<TInputImage, TOutputImage>
 {
 public:
@@ -215,8 +215,8 @@ public:
   itkSetMacro( NumberOfHistogramBins, unsigned int );
   itkGetConstMacro( NumberOfHistogramBins, unsigned int );
 
-  itkSetMacro( WeinerFilterNoise, RealType );
-  itkGetConstMacro( WeinerFilterNoise, RealType );
+  itkSetMacro( WienerFilterNoise, RealType );
+  itkGetConstMacro( WienerFilterNoise, RealType );
 
   itkSetMacro( BiasFieldFullWidthAtHalfMaximum, RealType );
   itkGetConstMacro( BiasFieldFullWidthAtHalfMaximum, RealType );
@@ -279,10 +279,10 @@ private:
     typename RealImageType::Pointer );
 
   /**
-   * Parameters for deconvolution with Weiner filter
+   * Parameters for deconvolution with Wiener filter
    */
   unsigned int m_NumberOfHistogramBins;
-  RealType     m_WeinerFilterNoise;
+  RealType     m_WienerFilterNoise;
   RealType     m_BiasFieldFullWidthAtHalfMaximum;
 
   /**

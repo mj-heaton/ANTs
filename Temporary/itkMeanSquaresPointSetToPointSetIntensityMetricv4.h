@@ -44,7 +44,7 @@ namespace itk
  */
 template<typename TFixedPointSet, typename TMovingPointSet = TFixedPointSet,
   typename TInternalComputationValueType = double>
-class MeanSquaresPointSetToPointSetIntensityMetricv4:
+class MeanSquaresPointSetToPointSetIntensityMetricv4 final:
   public PointSetToPointSetMetricv4<TFixedPointSet, TMovingPointSet, TInternalComputationValueType>
 {
 public:
@@ -133,7 +133,7 @@ public:
    /**
     * Initialize the metric by estimating the intensity and distance sigmas
     */
-  void Initialize( void ) throw ( ExceptionObject ) override;
+  void Initialize( void ) override;
 
   /**
    * Prepare point sets for use.

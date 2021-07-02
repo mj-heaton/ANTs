@@ -110,9 +110,9 @@ get_rai_code(itk::SpatialOrientation::ValidCoordinateOrientationFlags code)
 template <unsigned int ImageDimension>
 int PrintHeader(int argc, char *argv[])
 {
-  typedef  float                                     inPixelType;
-  typedef itk::Image<inPixelType, ImageDimension>    ImageType;
-  typedef itk::ImageFileReader<ImageType>            readertype;
+  using inPixelType = float;
+  using ImageType = itk::Image<inPixelType, ImageDimension>;
+  using readertype = itk::ImageFileReader<ImageType>;
 
   typename readertype::Pointer reader = readertype::New();
   if( argc < 2 )
@@ -236,9 +236,9 @@ int PrintHeader(int argc, char *argv[])
   double iMax = vox[0], iMin = vox[0], iMean = vox[0];
   for( size_t i = 1; i < n; i++ )
     {
-    iMax = (iMax > vox[i]) ? iMax : vox[i];
-    iMin = (iMin < vox[i]) ? iMin : vox[i];
-    iMean += vox[i];
+    iMax = ( iMax > static_cast<double>( vox[i] ) ) ? iMax : static_cast<double>( vox[i] );
+    iMin = ( iMin < static_cast<double>( vox[i] ) ) ? iMin : static_cast<double>( vox[i] );
+    iMean += static_cast<double>( vox[i] );
     }
   iMean /= n;
 
@@ -456,7 +456,7 @@ private:
     }
   itk::ImageIOBase::Pointer imageIO =
     itk::ImageIOFactory::CreateImageIO(
-      fn.c_str(), itk::ImageIOFactory::ReadMode);
+      fn.c_str(), itk::ImageIOFactory::FileModeEnum::ReadMode);
   imageIO->SetFileName(fn.c_str() );
   try
     {

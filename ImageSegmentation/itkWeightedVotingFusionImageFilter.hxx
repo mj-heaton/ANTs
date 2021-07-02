@@ -580,13 +580,16 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
           }
         mxValue /= static_cast<RealType>( this->GetNeighborhoodPatchSize() - 1 );
 
-        if( this->m_Beta == 2.0 )
+        if( ! itk::Math::FloatAlmostEqual( this->m_Beta, NumericTraits<RealType>::OneValue() ) )
           {
-          mxValue *= mxValue;
-          }
-        else
-          {
-          mxValue = std::pow( mxValue, this->m_Beta );
+          if( itk::Math::FloatAlmostEqual( this->m_Beta, static_cast<RealType>( 2.0 ) ) )
+            {
+            mxValue *= mxValue;
+            }
+          else
+            {
+            mxValue = std::pow( mxValue, this->m_Beta );
+            }
           }
 
         if( !std::isfinite( mxValue ) )
@@ -660,8 +663,8 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
           }
 
         RealType estimatedValue = (
-          estimatedNeighborhoodIntensities[i * this->GetNeighborhoodPatchSize() + j] +
-          this->m_JointIntensityFusionImage[i]->GetPixel( neighborhoodIndex ) );
+          static_cast<RealType>( estimatedNeighborhoodIntensities[i * this->GetNeighborhoodPatchSize() + j] ) +
+          static_cast<RealType>( this->m_JointIntensityFusionImage[i]->GetPixel( neighborhoodIndex ) ) );
 
         if( !std::isfinite( estimatedValue ) )
           {
@@ -709,14 +712,14 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
 
           // Add that weight the posterior map for voxel at idx
           this->m_LabelPosteriorProbabilityImages[label]->SetPixel( neighborhoodIndex,
-            this->m_LabelPosteriorProbabilityImages[label]->GetPixel( neighborhoodIndex ) + W[i] );
+            this->m_LabelPosteriorProbabilityImages[label]->GetPixel( neighborhoodIndex ) + static_cast<float>( W[i] ) );
           this->m_WeightSumImage->SetPixel( neighborhoodIndex,
-            this->m_WeightSumImage->GetPixel( neighborhoodIndex ) + W[i] );
+            this->m_WeightSumImage->GetPixel( neighborhoodIndex ) + static_cast<float>( W[i] ) );
 
           if( this->m_RetainAtlasVotingWeightImages )
             {
             this->m_AtlasVotingWeightImages[i]->SetPixel( neighborhoodIndex,
-              this->m_AtlasVotingWeightImages[i]->GetPixel( neighborhoodIndex ) + W[i] );
+              this->m_AtlasVotingWeightImages[i]->GetPixel( neighborhoodIndex ) + static_cast<float>( W[i] ) );
             }
           }
         }
@@ -764,9 +767,9 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
           this->m_LabelPosteriorProbabilityImages[*labelIt]->GetPixel( index );
 
         // Vote!
-        if( maxPosteriorProbability < posteriorProbability )
+        if( maxPosteriorProbability < static_cast<RealType>( posteriorProbability ) )
           {
-          maxPosteriorProbability = posteriorProbability;
+          maxPosteriorProbability = static_cast<RealType>( posteriorProbability );
           winningLabel = *labelIt;
           }
         }
@@ -774,40 +777,43 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
     It.Set( winningLabel );
     }
 
-  ImageRegionIteratorWithIndex<ProbabilityImageType> ItW( this->m_WeightSumImage,
-    region );
-
-  for( ItW.GoToBegin(); !ItW.IsAtEnd(); ++ItW )
+  if( this->m_RetainLabelPosteriorProbabilityImages || this->m_RetainAtlasVotingWeightImages )
     {
-    progress.CompletedPixel();
+    ImageRegionIteratorWithIndex<ProbabilityImageType> ItW( this->m_WeightSumImage,
+      region );
 
-    typename ProbabilityImageType::PixelType weightSum = ItW.Get();
-
-    IndexType index = ItW.GetIndex();
-
-    if( weightSum < 0.1 )
+    for( ItW.GoToBegin(); !ItW.IsAtEnd(); ++ItW )
       {
-      continue;
-      }
+      progress.CompletedPixel();
 
-    if( this->m_RetainLabelPosteriorProbabilityImages )
-      {
-      typename LabelSetType::const_iterator labelIt;
-      for( labelIt = this->m_LabelSet.begin(); labelIt != this->m_LabelSet.end(); ++labelIt )
+      typename ProbabilityImageType::PixelType weightSum = ItW.Get();
+
+      IndexType index = ItW.GetIndex();
+
+      if( weightSum < static_cast<typename ProbabilityImageType::PixelType>( 0.1 ) )
         {
-        typename ProbabilityImageType::PixelType labelProbability =
-          this->m_LabelPosteriorProbabilityImages[*labelIt]->GetPixel( index );
-        this->m_LabelPosteriorProbabilityImages[*labelIt]->SetPixel( index, labelProbability / weightSum );
+        continue;
         }
-      }
 
-    if( this->m_RetainAtlasVotingWeightImages )
-      {
-      for( SizeValueType i = 0; i < this->m_NumberOfAtlases; i++ )
+      if( this->m_RetainLabelPosteriorProbabilityImages )
         {
-        typename ProbabilityImageType::PixelType votingWeight =
-          this->m_AtlasVotingWeightImages[i]->GetPixel( index );
-        this->m_AtlasVotingWeightImages[i]->SetPixel( index, votingWeight / weightSum );
+        typename LabelSetType::const_iterator labelIt;
+        for( labelIt = this->m_LabelSet.begin(); labelIt != this->m_LabelSet.end(); ++labelIt )
+          {
+          typename ProbabilityImageType::PixelType labelProbability =
+            this->m_LabelPosteriorProbabilityImages[*labelIt]->GetPixel( index );
+          this->m_LabelPosteriorProbabilityImages[*labelIt]->SetPixel( index, labelProbability / weightSum );
+          }
+        }
+
+      if( this->m_RetainAtlasVotingWeightImages )
+        {
+        for( SizeValueType i = 0; i < this->m_NumberOfAtlases; i++ )
+          {
+          typename ProbabilityImageType::PixelType votingWeight =
+            this->m_AtlasVotingWeightImages[i]->GetPixel( index );
+          this->m_AtlasVotingWeightImages[i]->SetPixel( index, votingWeight / weightSum );
+          }
         }
       }
     }
@@ -838,7 +844,7 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
 
       if( count > 0 )
         {
-        ItJ.Set( ItJ.Get() / static_cast<RealType>( count ) );
+        ItJ.Set( ItJ.Get() / static_cast<InputImagePixelType>( count ) );
         }
       }
     }
@@ -875,7 +881,7 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
   wMaxValue = NumericTraits<RealType>::NonpositiveMin();
   for( SizeValueType i = 0; i < n; i++ )
     {
-    if( R[i] == 1 && wMaxValue < w[i] )
+    if( itk::Math::FloatAlmostEqual( R[i], NumericTraits<RealType>::OneValue() ) && wMaxValue < w[i] )
       {
       maxIndex = i;
       wMaxValue = w[i];
@@ -897,7 +903,7 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
     SizeValueType jIndex = 0;
     for( SizeValueType j = 0; j < n; j++ )
       {
-      if( P[j] == 1 )
+      if( itk::Math::FloatAlmostEqual( P[j], NumericTraits<RealType>::OneValue() ) )
         {
         AP.set_column( jIndex++, A.get_column( j ) );
         }
@@ -909,7 +915,7 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
 
     for( SizeValueType i = 0; i < n; i++ )
       {
-      if( R[i] != 0 )
+      if( ! itk::Math::FloatAlmostEqual( R[i], NumericTraits<RealType>::ZeroValue() ) )
         {
         s[i] = 0;
         }
@@ -926,7 +932,7 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
 
       for( SizeValueType i = 0; i < n; i++ )
         {
-        if( P[i] == 1 && s[i] <= tolerance )
+        if( itk::Math::FloatAlmostEqual( P[i], NumericTraits<RealType>::OneValue() ) && s[i] <= tolerance )
           {
           RealType value = x[i] / ( x[i] - s[i] );
           if( value < alpha )
@@ -940,7 +946,7 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
 
       for( SizeValueType i = 0; i < n; i++ )
         {
-        if( P[i] == 1 && std::fabs( x[i] ) < tolerance )
+        if( itk::Math::FloatAlmostEqual( P[i], NumericTraits<RealType>::OneValue() ) && std::fabs( x[i] ) < tolerance )
           {
           P[i] = 0;
           R[i] = 1;
@@ -957,7 +963,7 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
       jIndex = 0;
       for( SizeValueType j = 0; j < n; j++ )
         {
-        if( P[j] == 1 )
+        if( itk::Math::FloatAlmostEqual( P[j], NumericTraits<RealType>::OneValue() ) )
           {
           AP.set_column( jIndex++, A.get_column( j ) );
           }
@@ -968,7 +974,7 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
       iIndex = 0;
       for( SizeValueType i = 0; i < n; i++ )
         {
-        if( R[i] != 0 )
+        if( ! itk::Math::FloatAlmostEqual( R[i], NumericTraits<RealType>::ZeroValue() ) )
           {
           s[i] = 0;
           }
@@ -986,7 +992,7 @@ WeightedVotingFusionImageFilter<TInputImage, TOutputImage>
     wMaxValue = NumericTraits<RealType>::NonpositiveMin();
     for( SizeValueType i = 0; i < n; i++ )
       {
-      if( R[i] == 1 && wMaxValue < w[i] )
+      if( itk::Math::FloatAlmostEqual( R[i], NumericTraits<RealType>::OneValue() ) && wMaxValue < w[i] )
         {
         maxIndex = i;
         wMaxValue = w[i];

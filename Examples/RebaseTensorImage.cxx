@@ -91,9 +91,9 @@ private:
     return EXIT_FAILURE;
     }
 
-  typedef itk::DiffusionTensor3D<double> PixelType;
-  typedef itk::Image<PixelType, 3>       TensorImageType;
-  typedef itk::Image<float, 3>           ImageType;
+  using PixelType = itk::DiffusionTensor3D<double>;
+  using TensorImageType = itk::Image<PixelType, 3>;
+  using ImageType = itk::Image<float, 3>;
 
 
   // No reason to use log-euclidean space
@@ -123,7 +123,8 @@ private:
     std::cout << " -> " << convert << " space";
     ImageType::Pointer target;
     ReadImage<ImageType>( target, convert );
-    direction =  img_mov->GetDirection().GetTranspose() * target->GetDirection().GetVnlMatrix();
+    // converting from LOCAL to a reference LOCAL space
+    direction = target->GetDirection().GetTranspose() * img_mov->GetDirection().GetVnlMatrix();
     }
 
   // direction = direction.transpose(); // to accomodate for how

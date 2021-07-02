@@ -14,14 +14,14 @@ template <unsigned int ImageDimension>
 int AverageTensorImages(unsigned int argc, char *argv[])
 {
   // typedef itk::Vector<float,6> TensorType;
-  typedef itk::SymmetricSecondRankTensor<float, 3> TensorType;
+  using TensorType = itk::SymmetricSecondRankTensor<float, 3>;
 
-  typedef itk::Image<TensorType, ImageDimension>       ImageType;
-  typedef itk::ImageRegionIteratorWithIndex<ImageType> IteratorType;
+  using ImageType = itk::Image<TensorType, ImageDimension>;
+  using IteratorType = itk::ImageRegionIteratorWithIndex<ImageType>;
 
   char * outputName = argv[2];
   int    mathtype = std::stoi(argv[3]);
-  float  numberofimages = (float)argc - 4.0;
+  float  numberofimages = static_cast<float>( argc ) - 4.0f;
 
   std::cout << "Averaging " << numberofimages << " images " << std::endl;
 
@@ -37,7 +37,7 @@ int AverageTensorImages(unsigned int argc, char *argv[])
     std::string fn = std::string(argv[j]);
     std::cout << " fn " << fn << std::endl;
     typename itk::ImageIOBase::Pointer imageIO =
-      itk::ImageIOFactory::CreateImageIO(fn.c_str(), itk::ImageIOFactory::ReadMode);
+      itk::ImageIOFactory::CreateImageIO(fn.c_str(), itk::ImageIOFactory::FileModeEnum::ReadMode);
     imageIO->SetFileName(fn.c_str() );
     imageIO->ReadImageInformation();
     for( unsigned int i = 0; i < imageIO->GetNumberOfDimensions(); i++ )

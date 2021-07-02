@@ -18,19 +18,18 @@ namespace ants
 template <unsigned int ImageDimension>
 int TextureRunLengthFeatures( int argc, char *argv[] )
 {
-  typedef float PixelType;
-  typedef float RealType;
+  using PixelType = float;
+  using RealType = float;
 
-  typedef itk::Image<PixelType, ImageDimension> ImageType;
-  typedef itk::Image<RealType, ImageDimension> RealImageType;
+  using ImageType = itk::Image<PixelType, ImageDimension>;
+  using RealImageType = itk::Image<RealType, ImageDimension>;
 
   typename ImageType::Pointer inputImage = ImageType::New();
   ReadImage<ImageType>( inputImage, argv[2] );
 
-  typedef itk::Statistics::DenseFrequencyContainer2 HistogramFrequencyContainerType;
+  using HistogramFrequencyContainerType = itk::Statistics::DenseFrequencyContainer2;
 
-  typedef itk::Statistics::ScalarImageToRunLengthFeaturesFilter
-    <RealImageType, HistogramFrequencyContainerType> RunLengthFilterType;
+  using RunLengthFilterType = itk::Statistics::ScalarImageToRunLengthFeaturesFilter<RealImageType, HistogramFrequencyContainerType>;
   typename RunLengthFilterType::Pointer runLengthFilter = RunLengthFilterType::New();
   runLengthFilter->SetInput( inputImage );
 
@@ -63,8 +62,7 @@ int TextureRunLengthFeatures( int argc, char *argv[] )
   PixelType maxValue = itk::NumericTraits<PixelType>::NonpositiveMin();
   PixelType minValue = itk::NumericTraits<PixelType>::max();
 
-  typedef itk::BoundingBox<unsigned long,
-       ImageDimension, RealType> BoundingBoxType;
+  using BoundingBoxType = itk::BoundingBox<unsigned long, ImageDimension, RealType>;
   typename BoundingBoxType::Pointer bbox = BoundingBoxType::New();
   typename BoundingBoxType::PointsContainerPointer points
        = BoundingBoxType::PointsContainer::New();
@@ -74,7 +72,7 @@ int TextureRunLengthFeatures( int argc, char *argv[] )
 
   for( ItI.GoToBegin(); !ItI.IsAtEnd(); ++ItI )
     {
-    if ( !mask || ( mask->GetPixel( ItI.GetIndex() ) == label ) )
+    if ( !mask || ( itk::Math::FloatAlmostEqual( mask->GetPixel( ItI.GetIndex() ), label ) ) )
       {
       if ( ItI.Get() < minValue )
         {

@@ -17,12 +17,12 @@
 namespace ants
 {
 template <typename TFilter>
-class CommandIterationUpdate : public itk::Command
+class CommandIterationUpdate final : public itk::Command
 {
 public:
-  typedef CommandIterationUpdate  Self;
-  typedef itk::Command            Superclass;
-  typedef itk::SmartPointer<Self> Pointer;
+  using Self = CommandIterationUpdate<TFilter>;
+  using Superclass = itk::Command;
+  using Pointer = itk::SmartPointer<Self>;
   itkNewMacro( Self );
 protected:
   CommandIterationUpdate() = default;
@@ -61,20 +61,20 @@ public:
 template <unsigned int ImageDimension>
 int DiReCT( itk::ants::CommandLineParser *parser )
 {
-  typedef float        RealType;
-  typedef unsigned int LabelType;
+  using RealType = float;
+  using LabelType = unsigned int;
 
-  typedef itk::Image<LabelType, ImageDimension> LabelImageType;
+  using LabelImageType = itk::Image<LabelType, ImageDimension>;
   typename LabelImageType::Pointer segmentationImage;
 
-  typedef itk::Image<RealType, ImageDimension> ImageType;
+  using ImageType = itk::Image<RealType, ImageDimension>;
   typename ImageType::Pointer grayMatterProbabilityImage;
   typename ImageType::Pointer whiteMatterProbabilityImage;
   typename ImageType::Pointer thicknessPriorImage;
 
-  typedef itk::DiReCTImageFilter<LabelImageType, ImageType> DiReCTFilterType;
+  using DiReCTFilterType = itk::DiReCTImageFilter<LabelImageType, ImageType>;
   typename DiReCTFilterType::Pointer direct = DiReCTFilterType::New();
-  typedef typename DiReCTFilterType::LabelType DirectLabelType;
+  using DirectLabelType = typename DiReCTFilterType::LabelType;
 
   bool verbose = false;
   typename itk::ants::CommandLineParser::OptionType::Pointer verboseOption =
@@ -161,7 +161,7 @@ int DiReCT( itk::ants::CommandLineParser *parser )
                << "Creating one from the segmentation image." << std::endl;
       }
 
-    typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType> ThresholderType;
+    using ThresholderType = itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType>;
     typename ThresholderType::Pointer thresholder = ThresholderType::New();
     thresholder->SetInput( segmentationImage );
     thresholder->SetLowerThreshold( direct->GetGrayMatterLabel() );
@@ -169,7 +169,7 @@ int DiReCT( itk::ants::CommandLineParser *parser )
     thresholder->SetInsideValue( 1 );
     thresholder->SetOutsideValue( 0 );
 
-    typedef itk::DiscreteGaussianImageFilter<LabelImageType, ImageType> SmootherType;
+    using SmootherType = itk::DiscreteGaussianImageFilter<LabelImageType, ImageType>;
     typename SmootherType::Pointer smoother = SmootherType::New();
     smoother->SetVariance( 1.0 );
     smoother->SetUseImageSpacingOn();
@@ -198,8 +198,7 @@ int DiReCT( itk::ants::CommandLineParser *parser )
                << "Creating one from the segmentation image." << std::endl << std::endl;
       }
 
-    typedef itk::BinaryThresholdImageFilter<LabelImageType, ImageType>
-      ThresholderType;
+    using ThresholderType = itk::BinaryThresholdImageFilter<LabelImageType, ImageType>;
     typename ThresholderType::Pointer thresholder = ThresholderType::New();
     thresholder->SetInput( segmentationImage );
     thresholder->SetLowerThreshold( direct->GetWhiteMatterLabel() );
@@ -207,7 +206,7 @@ int DiReCT( itk::ants::CommandLineParser *parser )
     thresholder->SetInsideValue( 1 );
     thresholder->SetOutsideValue( 0 );
 
-    typedef itk::DiscreteGaussianImageFilter<ImageType, ImageType> SmootherType;
+    using SmootherType = itk::DiscreteGaussianImageFilter<ImageType, ImageType>;
     typename SmootherType::Pointer smoother = SmootherType::New();
     smoother->SetVariance( 1.0 );
     smoother->SetUseImageSpacingOn();
@@ -384,7 +383,7 @@ int DiReCT( itk::ants::CommandLineParser *parser )
 
   if( verbose )
     {
-    typedef CommandIterationUpdate<DiReCTFilterType> CommandType;
+    using CommandType = CommandIterationUpdate<DiReCTFilterType>;
     typename CommandType::Pointer observer = CommandType::New();
     direct->AddObserver( itk::IterationEvent(), observer );
     }
@@ -452,7 +451,7 @@ int DiReCT( itk::ants::CommandLineParser *parser )
 
 void KellyKapowskiInitializeCommandLineOptions( itk::ants::CommandLineParser *parser )
 {
-  typedef itk::ants::CommandLineParser::OptionType OptionType;
+  using OptionType = itk::ants::CommandLineParser::OptionType;
 
   {
   std::string description =
@@ -522,7 +521,7 @@ void KellyKapowskiInitializeCommandLineOptions( itk::ants::CommandLineParser *pa
   OptionType::Pointer option = OptionType::New();
   option->SetLongName( "convergence" );
   option->SetShortName( 'c' );
-  option->SetUsageOption( 0, "[<numberOfIterations=50>,<convergenceThreshold=0.001>,<convergenceWindowSize=10>]" );
+  option->SetUsageOption( 0, "[<numberOfIterations=45>,<convergenceThreshold=0.0>,<convergenceWindowSize=10>]" );
   option->SetDescription( description );
   parser->AddOption( option );
   }
@@ -627,7 +626,7 @@ void KellyKapowskiInitializeCommandLineOptions( itk::ants::CommandLineParser *pa
 
   OptionType::Pointer option = OptionType::New();
   option->SetLongName( "time-points" );
-  option->SetShortName( 'p' );
+  option->SetShortName( 'q' );
   option->SetUsageOption( 0, "1" );
   option->SetDescription( description );
   parser->AddOption( option );
@@ -834,7 +833,7 @@ private:
       return EXIT_FAILURE;
       }
     itk::ImageIOBase::Pointer imageIO = itk::ImageIOFactory::CreateImageIO(
-        filename.c_str(), itk::ImageIOFactory::ReadMode );
+        filename.c_str(), itk::ImageIOFactory::FileModeEnum::ReadMode );
     dimension = imageIO->GetNumberOfDimensions();
     }
 

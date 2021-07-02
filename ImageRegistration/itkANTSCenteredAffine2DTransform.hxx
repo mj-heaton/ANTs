@@ -102,17 +102,15 @@ void
 ANTSCenteredAffine2DTransform<TScalarType>
 ::ComputeMatrixParameters( void )
 {
-  typedef vnl_matrix<TScalarType> TMatrix;
+  typedef vnl_matrix_fixed<TScalarType, 2U, 2U> TMatrix;
 
-  TMatrix A, Q, R;
+  const TMatrix A { this->GetMatrix().GetVnlMatrix() };
+  vnl_qr<ScalarType> myqr(A.as_matrix());
 
-  A = this->GetMatrix().GetVnlMatrix();
-  vnl_qr<ScalarType> myqr(A);
+  TMatrix R = myqr.Q();   // Q() is the rotation
+  TMatrix Q = myqr.R();   // R() is the upper triangluar
 
-  R = myqr.Q();   // Q() is the rotation
-  Q = myqr.R();   // R() is the upper triangluar
-
-  TMatrix dq(2, 2, 0);
+  TMatrix dq(itk::NumericTraits<TScalarType>::ZeroValue());
   for( unsigned i = 0; i < 2; i++ )
     {
     dq(i, i) = (Q(i, i) >= 0) ? 1 : -1;
@@ -128,7 +126,7 @@ ANTSCenteredAffine2DTransform<TScalarType>
 
   m_Angle = std::acos(R[0][0]);
 
-  if( this->GetMatrix()[1][0] < 0.0 )
+  if( this->GetMatrix()[1][0] < itk::NumericTraits<TScalarType>::ZeroValue() )
     {
     m_Angle = -m_Angle;
     }
@@ -139,7 +137,8 @@ ANTSCenteredAffine2DTransform<TScalarType>
 
   this->ComputeMatrix();
 
-  if( this->GetMatrix()[1][0] - sin(m_Angle) > 0.000001 )
+  if( static_cast<double>( this->GetMatrix()[1][0] ) -
+      static_cast<double>( std::sin(m_Angle) ) > 0.000001 )
     {
     itkWarningMacro("Bad Rotation Matrix " << this->GetMatrix() );
     }
@@ -435,8 +434,8 @@ ANTSCenteredAffine2DTransform<TScalarType>::ComputeJacobianWithRespectToParamete
   // j[0][0] = -sa * ( p[0] - cx ) - ca * ( p[1] - cy );
   // j[1][0] =  ca * ( p[0] - cx ) - sa * ( p[1] - cy );
 
-  double pxoff = (p[0] - cx) + k * (p[1] - cy);
-  double pyoff = p[1] - cy;
+  double pxoff = ( static_cast<double>( p[0] ) - cx) + k * ( static_cast<double>( p[1] ) - cy );
+  double pyoff = static_cast<double>( p[1] ) - cy;
 
   // wrt. theta
   j[0][0] = s1 * ( pxoff ) * (-sa) + s2 * ( pyoff ) * (-ca);

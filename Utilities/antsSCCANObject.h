@@ -23,13 +23,16 @@
 #include <vnl/algo/vnl_matrix_inverse.h>
 #include <vnl/algo/vnl_cholesky.h>
 #include "itkImageToImageFilter.h"
+
+#include "itkMath.h"
+
 /** Custom SCCA implemented with vnl and ITK: Flexible positivity constraints, image ops, permutation testing, etc. */
 namespace itk
 {
 namespace ants
 {
 template <typename TInputImage, typename TRealType = double>
-class antsSCCANObject :
+class antsSCCANObject final :
   public ImageToImageFilter<TInputImage, TInputImage>
 {
 public:
@@ -161,7 +164,7 @@ public:
     if( ( !projecterM ) &&  ( !projecterV ) )
       {
       double ipv   = inner_product(V, V);
-      if( ipv == 0 )
+      if( itk::Math::FloatAlmostEqual( ipv, 0.0 ) )
         {
         return Mvec;
         }
@@ -188,7 +191,7 @@ public:
       VectorType ortho = Mvec - V * ratio;
       for( unsigned int i = 0; i < Mvec.size(); i++ )
         {
-        if( Mvec(i) == 0 )
+        if( itk::Math::FloatAlmostEqual( Mvec(i), itk::NumericTraits<RealType>::ZeroValue() ) )
           {
           ortho(i) = 0;
           }
@@ -740,7 +743,7 @@ public:
     double   sdy = sqrt(  ( y - y.mean() ).squared_magnitude() /  ( y.size() - 1) );
     double   sdyp = sqrt(  ( ypred - ypred.mean() ).squared_magnitude() /  ( y.size() - 1) );
 
-    if( sdyp == 0 )
+    if( itk::Math::FloatAlmostEqual( sdyp, 0.0 ) )
       {
       return 0;
       }
@@ -883,7 +886,7 @@ protected:
       RealType     mid = low + 0.5 * ( high - low );
       unsigned int its = 0;
       RealType     fnm = 0;
-      RealType     lastfnm = 1;
+      //NOT USED: RealType     lastfnm = 1;
       while( ( ( eng > (fnp*0.1) )  &&
                ( itk::Math::abs ( high - low ) > this->m_Epsilon )  &&
                ( its < 20 ) ) || its < 3  )
@@ -896,7 +899,7 @@ protected:
         searcherm = this->SpatiallySmoothVector( searcherm, mask );
         //      if ( its > 10 & fnm > 0.99 ) std::cout << " C " << searcherm << std::endl;
         //      if ( its > 10 & fnm > 0.99 ) exit(1);
-        lastfnm = fnm;
+        //NOT USED: lastfnm = fnm;
         fnm = this->CountNonZero( searcherm );
         if( fnm > fnp )
           {

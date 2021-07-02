@@ -5,8 +5,8 @@
  * those file.
  * \author Hans J. Johnson
  */
-#ifndef __antsUtilities_h__
-#define __antsUtilities_h__
+#ifndef antsUtilities_h
+#define antsUtilities_h
 
 // #include "antscout.hxx"
 #include "antsAllocImage.h"
@@ -24,8 +24,15 @@
 #include "itkBinaryBallStructuringElement.h"
 #include "itkBinaryDilateImageFilter.h"
 #include "itkBinaryErodeImageFilter.h"
+#include "itkBinaryMorphologicalClosingImageFilter.h"
+#include "itkBinaryMorphologicalOpeningImageFilter.h"
+
 #include "itkGrayscaleDilateImageFilter.h"
 #include "itkGrayscaleErodeImageFilter.h"
+#include "itkGrayscaleMorphologicalClosingImageFilter.h"
+#include "itkGrayscaleMorphologicalOpeningImageFilter.h"
+
+#include "itkMath.h"
 
 // We need to ensure that only one of these exists!
 namespace ants
@@ -112,22 +119,33 @@ typename TImage::Pointer  Morphological( typename TImage::Pointer input, float r
       TImage,
       TImage,
       StructuringElementType>  DilateFilterType;
+
+  typedef itk::BinaryMorphologicalClosingImageFilter<
+      TImage,
+      TImage,
+      StructuringElementType>  ClosingFilterType;
+
+  typedef itk::BinaryMorphologicalOpeningImageFilter<
+      TImage,
+      TImage,
+      StructuringElementType>  OpeningFilterType;
+
   typename ErodeFilterType::Pointer  binaryErode  = ErodeFilterType::New();
   typename DilateFilterType::Pointer binaryDilate = DilateFilterType::New();
+  typename OpeningFilterType::Pointer  binaryOpen  = OpeningFilterType::New();
+  typename ClosingFilterType::Pointer binaryClose = ClosingFilterType::New();
 
   StructuringElementType structuringElement;
 
-  structuringElement.SetRadius( (unsigned long) rad );  // 3x3x3 structuring element
+  structuringElement.SetRadius( static_cast<unsigned long>( rad ) );  // 3x3x3 structuring element
 
   structuringElement.CreateStructuringElement();
 
   binaryErode->SetKernel(  structuringElement );
   binaryDilate->SetKernel( structuringElement );
-  // binaryOpen->SetKernal( structuringElement );
-  // binaryClose->SetKernel( structuringElement );
-  //
-  // typename OpeningFilterType::Pointer  binaryOpen  = OpeningFilterType::New();
-  // typename ClosingFilterType::Pointer binaryClose = ClosingFilterType::New();
+  binaryOpen->SetKernel( structuringElement );
+  binaryClose->SetKernel( structuringElement );
+
   typedef itk::GrayscaleErodeImageFilter<
       TImage,
       TImage,
@@ -138,86 +156,90 @@ typename TImage::Pointer  Morphological( typename TImage::Pointer input, float r
       TImage,
       StructuringElementType> GrayscaleDilateFilterType;
 
+  typedef itk::GrayscaleMorphologicalClosingImageFilter<
+      TImage,
+      TImage,
+      StructuringElementType>  GrayscaleClosingFilterType;
+
+  typedef itk::GrayscaleMorphologicalOpeningImageFilter<
+      TImage,
+      TImage,
+      StructuringElementType>  GrayscaleOpeningFilterType;
+
   typename GrayscaleErodeFilterType::Pointer grayscaleErode = GrayscaleErodeFilterType::New();
   typename GrayscaleDilateFilterType::Pointer grayscaleDilate = GrayscaleDilateFilterType::New();
+  typename GrayscaleOpeningFilterType::Pointer grayscaleOpen = GrayscaleOpeningFilterType::New();
+  typename GrayscaleClosingFilterType::Pointer grayscaleClose = GrayscaleClosingFilterType::New();
   grayscaleErode->SetKernel( structuringElement );
   grayscaleDilate->SetKernel( structuringElement );
+  grayscaleOpen->SetKernel( structuringElement );
+  grayscaleClose->SetKernel( structuringElement );
 
   //  It is necessary to define what could be considered objects on the binary
   //  images. This is specified with the methods \code{SetErodeValue()} and
   //  \code{SetDilateValue()}. The value passed to these methods will be
   //  considered the value over which the dilation and erosion rules will apply
-  binaryErode->SetErodeValue( (unsigned int ) dilateval );
-  binaryDilate->SetDilateValue(  (unsigned int ) dilateval );
+  binaryErode->SetErodeValue( static_cast<PixelType>( dilateval ) );
+  binaryDilate->SetDilateValue( static_cast<PixelType>( dilateval ) );
+  binaryOpen->SetForegroundValue( static_cast<PixelType>( dilateval ) );
+  binaryClose->SetForegroundValue( static_cast<PixelType>( dilateval ) );
 
   typename TImage::Pointer temp;
   if( option == 1 )
     {
-//    std::cout << " Dilate " << rad << std::endl;
+//    std::cout << " Binary Dilate " << rad << std::endl;
     binaryDilate->SetInput( input );
     binaryDilate->Update();
     temp = binaryDilate->GetOutput();
     }
   else if( option == 0 )
     {
-//    std::cout << " Erode " << rad << std::endl;
-    binaryErode->SetInput( input );  // binaryDilate->GetOutput() );
+//    std::cout << " Binary Erode " << rad << std::endl;
+    binaryErode->SetInput( input );
     binaryErode->Update();
     temp = binaryErode->GetOutput();
     }
   else if( option == 2 )
     {
-    // dilate(erode(img))
 //    std::cout << " Binary Open " << rad << std::endl;
-    // binaryOpen->SetInput( input );//binaryDilate->GetOutput() );
-    // binaryOpen->Update();
-    binaryErode->SetInput( input );
-    binaryDilate->SetInput( binaryErode->GetOutput() );
-    binaryDilate->Update();
-    temp = binaryDilate->GetOutput();
+    binaryOpen->SetInput( input );
+    binaryOpen->Update();
+    temp = binaryOpen->GetOutput();
     }
   else if( option == 3 )
     {
 //    std::cout << " Binary Close " << rad << std::endl;
-    // binaryClose->SetInput( input );//binaryDilate->GetOutput() );
-    // binaryClose->Update();
-    binaryDilate->SetInput( input );
-    binaryErode->SetInput( binaryDilate->GetOutput() );
-    binaryErode->Update();
-    temp = binaryErode->GetOutput();
+    binaryClose->SetInput( input );
+    binaryClose->Update();
+    temp = binaryClose->GetOutput();
     }
   else if( option == 4 )
     {
 //    std::cout << " Grayscale Erode " << rad << std::endl;
-    grayscaleErode->SetInput( input ); // binaryDilate->GetOutput() );
+    grayscaleErode->SetInput( input );
     grayscaleErode->Update();
     temp = grayscaleErode->GetOutput();
     }
   else if( option == 5 )
     {
 //    std::cout << " Grayscale Dilate " << rad << std::endl;
-    grayscaleDilate->SetInput( input ); // binaryDilate->GetOutput() );
+    grayscaleDilate->SetInput( input );
     grayscaleDilate->Update();
     temp = grayscaleDilate->GetOutput();
-//    std::cout << " Grayscale Dilate Done " << temp << std::endl;
     }
   else if( option == 6 )
     {
 //    std::cout << " Grayscale Open " << rad << std::endl;
-    grayscaleErode->SetInput( input ); // binaryDilate->GetOutput() );
-    grayscaleErode->Update();
-    grayscaleDilate->SetInput( grayscaleErode->GetOutput() );
-    grayscaleDilate->Update();
-    temp = grayscaleDilate->GetOutput();
+    grayscaleOpen->SetInput( input );
+    grayscaleOpen->Update();
+    temp = grayscaleOpen->GetOutput();
     }
   else if( option == 7 )
     {
 //    std::cout << " Grayscale Close " << rad << std::endl;
-    grayscaleDilate->SetInput( input ); // binaryDilate->GetOutput() );
-    grayscaleDilate->Update();
-    grayscaleErode->SetInput( grayscaleDilate->GetOutput() );
-    grayscaleErode->Update();
-    temp = grayscaleErode->GetOutput();
+    grayscaleClose->SetInput( input );
+    grayscaleClose->Update();
+    temp = grayscaleClose->GetOutput();
     }
 
   if( option == 0 )
@@ -228,7 +250,7 @@ typename TImage::Pointer  Morphological( typename TImage::Pointer input, float r
     o_iter.GoToBegin();
     while( !o_iter.IsAtEnd() )
       {
-      if( o_iter.Get() > 0.5 && input->GetPixel(o_iter.GetIndex() ) > 0.5 )
+      if( o_iter.Get() > static_cast<typename ImageType::PixelType>( 0.5 ) && input->GetPixel(o_iter.GetIndex() ) > static_cast<typename ImageType::PixelType>( 0.5 ) )
         {
         o_iter.Set(1);
         }
@@ -345,7 +367,7 @@ typename TImage::Pointer BinaryThreshold(
   inputThresholder->SetInput( input );
   inputThresholder->SetInsideValue(  replaceval );
   int outval = 0;
-  if( (float) replaceval == (float) -1 )
+  if( itk::Math::FloatAlmostEqual( static_cast<float>( replaceval ), -1.0f ) )
     {
     outval = 1;
     }
@@ -355,8 +377,8 @@ typename TImage::Pointer BinaryThreshold(
     {
     high = 255;
     }
-  inputThresholder->SetLowerThreshold( (PixelType) low );
-  inputThresholder->SetUpperThreshold( (PixelType) high );
+  inputThresholder->SetLowerThreshold( static_cast<PixelType>( low ) );
+  inputThresholder->SetUpperThreshold( static_cast<PixelType>( high ) );
   inputThresholder->Update();
 
   return inputThresholder->GetOutput();
@@ -554,7 +576,7 @@ void GetLargestSizeAfterWarp(typename WarperType::Pointer & warper,
     }
   for( int i = 0; i < ImageDimension; i++ )
     {
-    largest_size[i] = (int) (ceil( (pt_max[i] - pt_min[i]) / spacing[i]) + 1);
+    largest_size[i] = static_cast<int>( (ceil( (pt_max[i] - pt_min[i]) / spacing[i]) + 1) );
     }
 
   origin_warped = pt_min;
@@ -652,7 +674,7 @@ typedef enum
   } TRAN_FILE_TYPE;
 
 // TODO: This should be a class.
-typedef struct
+using TRAN_OPT = struct TRAN_OPT_STRUCT
   {
   //    char *filename;
   std::string filename;
@@ -664,17 +686,17 @@ typedef struct
   //        this.do_affine_inv = do_affine_inv;
   //    };
   double weight;   // for average
-  } TRAN_OPT;
+  };
 
 typedef std::vector<TRAN_OPT> TRAN_OPT_QUEUE;
 
-typedef struct
+using MLINTERP_OPT = struct MLINTERP_OPT_STRUCT
   {
   bool physical_units;
   std::vector<double> sigma;
-  } MLINTERP_OPT;
+  };
 
-typedef struct
+using MISC_OPT = struct MISC_OPT_STRUCT
   {
   bool use_NN_interpolator;
   bool use_MultiLabel_interpolator;
@@ -684,7 +706,7 @@ typedef struct
   bool use_RotationHeader;
 
   MLINTERP_OPT opt_ML;
-  } MISC_OPT;
+  };
 
 extern TRAN_FILE_TYPE CheckFileType(const char * const str);
 

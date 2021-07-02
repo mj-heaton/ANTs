@@ -17,7 +17,7 @@ There are two types of registration that do not use generic "itkImageRegistratio
 As these registration types have their own specific optimization processes, a different observer is needed to watch their internal optimization procedure.
 */
 template <typename TFilter>
-class antsDisplacementAndVelocityFieldRegistrationCommandIterationUpdate : public itk::Command
+class antsDisplacementAndVelocityFieldRegistrationCommandIterationUpdate final : public itk::Command
 {
 public:
   typedef antsDisplacementAndVelocityFieldRegistrationCommandIterationUpdate Self;
@@ -53,18 +53,18 @@ protected:
     m_clock.Start();
     this->m_LogStream = &std::cout;
     this->m_ComputeFullScaleCCInterval = 0;
-    this->m_WriteInterationsOutputsInIntervals = 0;
+    this->m_WriteIterationsOutputsInIntervals = 0;
     this->m_CurrentStageNumber = 0;
   }
 
 public:
 
-  void Execute(itk::Object *caller, const itk::EventObject & event) override
+  void Execute(itk::Object *caller, const itk::EventObject & event) final
   {
     Execute( (const itk::Object *) caller, event);
   }
 
-  void Execute(const itk::Object * object, const itk::EventObject & event ) override
+  void Execute(const itk::Object * object, const itk::EventObject & event ) final
   {
     TFilter const * const filter = dynamic_cast<const TFilter *>( object );
 
@@ -143,8 +143,8 @@ public:
         this->UpdateFullScaleMetricValue(filter, metricValue);
         }
 
-      if( ( this->m_WriteInterationsOutputsInIntervals != 0 ) &&
-          ( lCurrentIteration == 1 || (lCurrentIteration % this->m_WriteInterationsOutputsInIntervals == 0 ) ||
+      if( ( this->m_WriteIterationsOutputsInIntervals != 0 ) &&
+          ( lCurrentIteration == 1 || (lCurrentIteration % this->m_WriteIterationsOutputsInIntervals == 0 ) ||
             lCurrentIteration == lastIteration) )
         {
         // This function writes the output volume of each iteration to the disk.
@@ -190,7 +190,7 @@ public:
 
   itkSetMacro( ComputeFullScaleCCInterval, unsigned int );
 
-  itkSetMacro( WriteInterationsOutputsInIntervals, unsigned int );
+  itkSetMacro( WriteIterationsOutputsInIntervals, unsigned int );
 
   itkSetMacro( CurrentStageNumber, unsigned int );
 
@@ -503,11 +503,11 @@ private:
   itk::RealTimeClock::TimeStampType m_lastTotalTime;
 
   unsigned int m_ComputeFullScaleCCInterval;
-  unsigned int m_WriteInterationsOutputsInIntervals;
+  unsigned int m_WriteIterationsOutputsInIntervals;
   unsigned int m_CurrentStageNumber;
 
   typename FixedImageType::Pointer  m_origFixedImage;
   typename MovingImageType::Pointer m_origMovingImage;
 };
-}; // end namespace ants
+} // end namespace ants
 #endif // antsDisplacementAndVelocityFieldRegistrationCommandIterationUpdate__h_

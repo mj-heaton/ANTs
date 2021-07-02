@@ -39,7 +39,7 @@ void WriteAffineTransformFile(typename TransformType::Pointer & transform,
     {
     transform_writer->Update();
     }
-  catch( itk::ExceptionObject & err )
+  catch( itk::ExceptionObject & itkNotUsed(err) )
     {
     std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl
              << "Exception in writing transform file: " << std::endl
@@ -47,8 +47,7 @@ void WriteAffineTransformFile(typename TransformType::Pointer & transform,
     return;
     }
 
-  return;
-}
+  }
 
 // //////////////////////////////////////////////////////////////////////
 // Stripped from ANTS_affine_registration2.h
@@ -75,7 +74,7 @@ void DumpTransformForANTS3D(const typename TransformA::Pointer & transform, cons
   constexpr int ImageDimension = 3;
 
   // ANTS transform file type
-  typedef itk::MatrixOffsetTransformBase<double, ImageDimension, ImageDimension> AffineTransformType;
+  using AffineTransformType = itk::MatrixOffsetTransformBase<double, ImageDimension, ImageDimension>;
   AffineTransformType::Pointer transform_ANTS = AffineTransformType::New();
 
   //    typedef TransformAPointer::ObjectType TransformA;
@@ -168,9 +167,9 @@ void GetAffineTransformFromTwoPointSets3D(PointContainerType & fixedLandmarks, P
 
   vnl_vector<double> t = A11.get_column(Dim);
 
-  typedef typename TransformType::InputPointType   PointType;
-  typedef typename TransformType::OutputVectorType VectorType;
-  typedef typename TransformType::MatrixType       MatrixType;
+  using PointType = typename TransformType::InputPointType;
+  using VectorType = typename TransformType::OutputVectorType;
+  using MatrixType = typename TransformType::MatrixType;
 
   PointType center;
   for( int i = 0; i < Dim; i++ )
@@ -189,8 +188,6 @@ void GetAffineTransformFromTwoPointSets3D(PointContainerType & fixedLandmarks, P
   transform->SetCenter(center);
   transform->SetTranslation(translation);
   transform->SetMatrix(matrix);
-
-  return;
 }
 
 template <typename PointContainerType, typename TTransform>
@@ -198,16 +195,15 @@ void GetRigidTransformFromTwoPointSets3D(PointContainerType & fixedLandmarks, Po
                                          typename TTransform::Pointer & aff)
 {
   // Set the transform type..
-  typedef itk::VersorRigid3DTransform<double> TransformType;
+  using TransformType = itk::VersorRigid3DTransform<double>;
   TransformType::Pointer transform = TransformType::New();
 
-  typedef  float PixelType;
+  using PixelType = float;
   constexpr unsigned int Dimension = 3;
-  typedef itk::Image<PixelType, Dimension> FixedImageType;
-  typedef itk::Image<PixelType, Dimension> MovingImageType;
+  using FixedImageType = itk::Image<PixelType, Dimension>;
+  using MovingImageType = itk::Image<PixelType, Dimension>;
 
-  typedef itk::LandmarkBasedTransformInitializer<TransformType,
-                                                 FixedImageType, MovingImageType> TransformInitializerType;
+  using TransformInitializerType = itk::LandmarkBasedTransformInitializer<TransformType, FixedImageType, MovingImageType>;
   TransformInitializerType::Pointer initializer = TransformInitializerType::New();
 
   initializer->SetFixedLandmarks(fixedLandmarks);
@@ -233,11 +229,11 @@ void FetchLandmarkMappingFromDisplacementField(const std::string& deformation_fi
 {
   constexpr unsigned int ImageDimension = 3;
 
-  typedef typename PointContainerType::value_type PointType;
+  using PointType = typename PointContainerType::value_type;
 
-  typedef itk::Vector<float, ImageDimension>          VectorType;
-  typedef itk::Image<VectorType, ImageDimension>      DisplacementFieldType;
-  typedef itk::ImageFileReader<DisplacementFieldType> FieldReaderType;
+  using VectorType = itk::Vector<float, ImageDimension>;
+  using DisplacementFieldType = itk::Image<VectorType, ImageDimension>;
+  using FieldReaderType = itk::ImageFileReader<DisplacementFieldType>;
 
   typename FieldReaderType::Pointer field_reader = FieldReaderType::New();
   field_reader->SetFileName( deformation_field_file_name );
@@ -262,7 +258,7 @@ void FetchLandmarkMappingFromDisplacementField(const std::string& deformation_fi
   fixedLandmarks.reserve(nb_try_to_load );
   movingLandmarks.reserve(nb_try_to_load );
 
-  typedef itk::ImageRegionIteratorWithIndex<DisplacementFieldType> FieldIteratorType;
+  using FieldIteratorType = itk::ImageRegionIteratorWithIndex<DisplacementFieldType>;
 
   FieldIteratorType it(field, field->GetLargestPossibleRegion() );
 
@@ -275,7 +271,7 @@ void FetchLandmarkMappingFromDisplacementField(const std::string& deformation_fi
     bool getpoint = true;
     if( maskimg )
       {
-      if( maskimg->GetPixel( it.GetIndex() ) < 0.5 )
+      if( maskimg->GetPixel( it.GetIndex() ) < 0.5f )
         {
         getpoint = false;
         }
@@ -295,7 +291,7 @@ void FetchLandmarkMappingFromDisplacementField(const std::string& deformation_fi
       VectorType displacement = field->GetPixel(index);
       for( unsigned int j = 0; j < ImageDimension; j++ )
         {
-        point2[j] = point1[j] + displacement[j];
+        point2[j] = point1[j] + static_cast<typename PointType::CoordRepType>( displacement[j] );
         }
 
       fixedLandmarks.push_back(point1);
@@ -308,8 +304,6 @@ void FetchLandmarkMappingFromDisplacementField(const std::string& deformation_fi
   std::cout << "total " << cnt << " points loaded from " << deformation_field_file_name << "." << std::endl;
   std::cout << fixedLandmarks.size() << std::endl;
   std::cout << movingLandmarks.size() << std::endl;
-
-  return;
 }
 
 //
@@ -321,9 +315,9 @@ int DisplacementFieldBasedTransformInitializer3D(int argc, char * argv[])
 {
   constexpr unsigned int Dim = 3;
 
-  typedef itk::Point<double, Dim> PointType;
-  typedef itk::Image<float, Dim>  ImageType;
-  typedef std::vector<PointType>  PointContainerType;
+  using PointType = itk::Point<double, Dim>;
+  using ImageType = itk::Image<float, Dim>;
+  using PointContainerType = std::vector<PointType>;
   const char *deformation_field_file_name = argv[1];
   float       load_ratio = atof(argv[2]);
   bool        bRigid = (strcmp(argv[3], "rigid") == 0);
@@ -338,7 +332,7 @@ int DisplacementFieldBasedTransformInitializer3D(int argc, char * argv[])
   // input
   PointContainerType fixedLandmarks, movingLandmarks;
   // output
-  typedef itk::MatrixOffsetTransformBase<double, 3, 3> AffineTransformType;
+  using AffineTransformType = itk::MatrixOffsetTransformBase<double, 3, 3>;
   AffineTransformType::Pointer aff = AffineTransformType::New();
 
   ImageType::Pointer maskimg = nullptr;
@@ -480,7 +474,7 @@ private:
   // Get the image dimension
   // std::string fn = std::string(argv[1]) + "xvec.nii.gz";
   // itk::ImageIOBase::Pointer imageIO =
-  //        itk::ImageIOFactory::CreateImageIO(fn.c_str(), itk::ImageIOFactory::ReadMode);
+  //        itk::ImageIOFactory::CreateImageIO(fn.c_str(), itk::ImageIOFactory::FileModeType::ReadMode);
   // imageIO->SetFileName(fn.c_str());
   // imageIO->ReadImageInformation();
 

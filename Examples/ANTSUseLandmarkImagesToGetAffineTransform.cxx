@@ -36,7 +36,7 @@ void WriteAffineTransformFile(typename TransformType::Pointer & transform,
     {
     transform_writer->Update();
     }
-  catch( itk::ExceptionObject & err )
+  catch( itk::ExceptionObject & itkNotUsed(err) )
     {
     std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl
              << "Exception in writing transform file: " << std::endl
@@ -44,8 +44,7 @@ void WriteAffineTransformFile(typename TransformType::Pointer & transform,
     return;
     }
 
-  return;
-}
+  }
 
 // //////////////////////////////////////////////////////////////////////
 // Stripped from ANTS_affine_registration2.h
@@ -53,8 +52,8 @@ template <typename RunningAffineTransformPointerType, typename AffineTransformPo
 inline void PostConversionInAffine(RunningAffineTransformPointerType& transform_running,
                                    AffineTransformPointerType & transform)
 {
-  typedef typename RunningAffineTransformPointerType::ObjectType RunningAffineTransformType;
-  typedef typename AffineTransformPointerType::ObjectType        AffineTransformType;
+  using RunningAffineTransformType = typename RunningAffineTransformPointerType::ObjectType;
+  using AffineTransformType = typename AffineTransformPointerType::ObjectType;
 
   transform->SetCenter(*(reinterpret_cast<typename AffineTransformType::InputPointType *>
                          (const_cast<typename RunningAffineTransformType::InputPointType *>(&(transform_running->
@@ -73,7 +72,7 @@ template <typename TransformA, unsigned int ImageDimension>
 void DumpTransformForANTS3D(typename TransformA::Pointer & transform, const std::string & ANTS_prefix)
 {
   // ANTS transform file type
-  typedef itk::AffineTransform<double, ImageDimension> AffineTransformType;
+  using AffineTransformType = itk::AffineTransform<double, ImageDimension>;
   typename AffineTransformType::Pointer transform_ANTS = AffineTransformType::New();
   std::string ANTS_affine_filename = ANTS_prefix;
   PostConversionInAffine(transform, transform_ANTS);
@@ -154,9 +153,9 @@ void GetAffineTransformFromTwoPointSets(PointContainerType & fixedLandmarks, Poi
 
   vnl_vector<double> t = A11.get_column(Dim);
 
-  typedef typename TransformType::InputPointType   PointType;
-  typedef typename TransformType::OutputVectorType VectorType;
-  typedef typename TransformType::MatrixType       MatrixType;
+  using PointType = typename TransformType::InputPointType;
+  using VectorType = typename TransformType::OutputVectorType;
+  using MatrixType = typename TransformType::MatrixType;
 
   PointType center;
   for( unsigned int i = 0; i < Dim; i++ )
@@ -175,8 +174,6 @@ void GetAffineTransformFromTwoPointSets(PointContainerType & fixedLandmarks, Poi
   transform->SetCenter(center);
   transform->SetTranslation(translation);
   transform->SetMatrix(matrix);
-
-  return;
 }
 
 //
@@ -187,11 +184,11 @@ void GetAffineTransformFromTwoPointSets(PointContainerType & fixedLandmarks, Poi
 template <unsigned int Dimension>
 int LandmarkBasedTransformInitializerBA(int, char * argv[])
 {
-  typedef  float PixelType;
-  typedef itk::Image<PixelType, Dimension>             FixedImageType;
-  typedef itk::Image<PixelType, Dimension>             MovingImageType;
-  typedef itk::Image<PixelType, Dimension>             ImageType;
-  typedef itk::ImageRegionIteratorWithIndex<ImageType> Iterator;
+  using PixelType = float;
+  using FixedImageType = itk::Image<PixelType, Dimension>;
+  using MovingImageType = itk::Image<PixelType, Dimension>;
+  using ImageType = itk::Image<PixelType, Dimension>;
+  using Iterator = itk::ImageRegionIteratorWithIndex<ImageType>;
   typename ImageType::Pointer fixedimage;
   typename ImageType::Pointer movingimage;
   ReadImage<ImageType>(fixedimage, argv[1]);
@@ -200,7 +197,7 @@ int LandmarkBasedTransformInitializerBA(int, char * argv[])
   bool bRigid = (strcmp(argv[3], "rigid") == 0);
 
   /** get all of the relevant labels in the fixed image and moving image */
-  typedef std::vector<PixelType> LabelSetType;
+  using LabelSetType = std::vector<PixelType>;
   LabelSetType myFixLabelSet;
   LabelSetType myMovLabelSet;
   /** count the labels in the image */
@@ -243,7 +240,7 @@ int LandmarkBasedTransformInitializerBA(int, char * argv[])
     float fixlabel = *fit;
     float movlabel = *mit;
     std::cout << " fix-label " << fixlabel << " movlabel " << movlabel << std::endl;
-    if( movlabel != fixlabel )
+    if( ! itk::Math::FloatAlmostEqual( movlabel, fixlabel ) )
       {
       std::cout << " labels do not match -- exiting " << std::endl;
       exit(1);
@@ -252,14 +249,13 @@ int LandmarkBasedTransformInitializerBA(int, char * argv[])
     }
 
   // Set the transform type..
-  typedef itk::AffineTransform<double,Dimension> TransformType;
+  using TransformType = itk::AffineTransform<double, Dimension>;
   typename TransformType::Pointer transform = TransformType::New();
-  typedef itk::LandmarkBasedTransformInitializer<TransformType,
-                                                 FixedImageType, MovingImageType> TransformInitializerType;
+  using TransformInitializerType = itk::LandmarkBasedTransformInitializer<TransformType, FixedImageType, MovingImageType>;
                                                  typename TransformInitializerType::Pointer initializer = TransformInitializerType::New();
 
   // Set fixed and moving landmarks
-  typedef typename TransformInitializerType::LandmarkPointContainer PointsContainerType;
+  using PointsContainerType = typename TransformInitializerType::LandmarkPointContainer;
   PointsContainerType fixedLandmarks;
   PointsContainerType movingLandmarks;
 
@@ -289,7 +285,7 @@ int LandmarkBasedTransformInitializerBA(int, char * argv[])
       }
     for( unsigned int i = 0; i < spacing.Size(); i++ )
       {
-      myCenterOfMass[i] /= (float)totalct;
+      myCenterOfMass[i] /= static_cast<double>( totalct );
       }
     // std::cout << " pushing-fix " <<  myCenterOfMass << std::endl;
     fixedLandmarks.push_back( myCenterOfMass );
@@ -301,12 +297,13 @@ int LandmarkBasedTransformInitializerBA(int, char * argv[])
     {
     float                                       currentlabel = *mit;
     float                                       totalct = 0;
-    typename TransformInitializerType::LandmarkPointType myCenterOfMass;
+    using LandmarkPointType = typename TransformInitializerType::LandmarkPointType;
+    LandmarkPointType myCenterOfMass;
     myCenterOfMass.Fill(0);
     for( ItM.GoToBegin(); !ItM.IsAtEnd(); ++ItM )
       {
       PixelType label = ItM.Get();
-      if(  label == currentlabel  )
+      if( itk::Math::FloatAlmostEqual( label, currentlabel ) )
         {
         totalct++;
         // compute center of mass
@@ -320,7 +317,7 @@ int LandmarkBasedTransformInitializerBA(int, char * argv[])
       }
     for( unsigned int i = 0; i < spacing.Size(); i++ )
       {
-      myCenterOfMass[i] /= (float)totalct;
+      myCenterOfMass[i] /= static_cast<typename LandmarkPointType::CoordRepType>( totalct );
       }
     //    std::cout << " pushing-mov " <<  myCenterOfMass << std::endl;
     movingLandmarks.push_back( myCenterOfMass );
@@ -352,7 +349,7 @@ int LandmarkBasedTransformInitializerBA(int, char * argv[])
   // transform the transform to ANTS format
   std::string ANTS_prefix(argv[4]);
 
-  typedef itk::AffineTransform<double, Dimension> AffineTransformType;
+  using AffineTransformType = itk::AffineTransform<double, Dimension>;
   typename AffineTransformType::Pointer aff = AffineTransformType::New();
 
   GetAffineTransformFromTwoPointSets<PointsContainerType, AffineTransformType,Dimension>(fixedLandmarks, movingLandmarks, aff);
@@ -435,7 +432,7 @@ private:
   // Get the image dimension
   std::string               fn = std::string(argv[1]);
   itk::ImageIOBase::Pointer imageIO =
-    itk::ImageIOFactory::CreateImageIO(fn.c_str(), itk::ImageIOFactory::ReadMode);
+    itk::ImageIOFactory::CreateImageIO(fn.c_str(), itk::ImageIOFactory::FileModeEnum::ReadMode);
   imageIO->SetFileName(fn.c_str() );
   imageIO->ReadImageInformation();
 

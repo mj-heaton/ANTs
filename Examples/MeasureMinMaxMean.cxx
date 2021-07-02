@@ -21,9 +21,9 @@ namespace ants
 template <unsigned int ImageDimension, unsigned int NVectorComponents>
 int MeasureMinMaxMean(int argc, char *argv[])
 {
-  typedef itk::Vector<float, NVectorComponents>                           PixelType;
-  typedef itk::Image<PixelType, ImageDimension>                           ImageType;
-  typedef itk::ImageRegionIteratorWithIndex<ImageType>                    Iterator;
+  using PixelType = itk::Vector<float, NVectorComponents>;
+  using ImageType = itk::Image<PixelType, ImageDimension>;
+  using Iterator = itk::ImageRegionIteratorWithIndex<ImageType>;
 
   typename ImageType::Pointer image = nullptr;
   typename ImageType::Pointer mask = nullptr;
@@ -102,13 +102,13 @@ int MeasureMinMaxMean(int argc, char *argv[])
           val[k] = fabs(val[k]);
           }
         }
-      variance += (val - mean).GetSquaredNorm();
+      variance += static_cast<float>( (val - mean).GetSquaredNorm() );
       }
     }
 
-  float temp = (1.0 / (float)ct) * variance;
+  float temp = (1.0f / (float)ct) * variance;
   std::cout <<  argv[2] << " Max : " << max << " Min : " << min << " Mean : " << mean << " Var : " <<  temp
-           << " SD : " << sqrt(1.0 / (float)(ct - 1) * variance) << std::endl;
+           << " SD : " << std::sqrt(1.0f / (float)(ct - 1) * variance) << std::endl;
 
   if( argc > 3 )
     {
@@ -187,7 +187,7 @@ private:
     }
   int                       dim = std::stoi( argv[1] );
   itk::ImageIOBase::Pointer imageIO =
-    itk::ImageIOFactory::CreateImageIO(argv[2], itk::ImageIOFactory::ReadMode);
+    itk::ImageIOFactory::CreateImageIO(argv[2], itk::ImageIOFactory::FileModeEnum::ReadMode);
   imageIO->SetFileName(argv[2]);
   imageIO->ReadImageInformation();
   unsigned int ncomponents = imageIO->GetNumberOfComponents();

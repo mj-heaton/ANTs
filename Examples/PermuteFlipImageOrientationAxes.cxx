@@ -30,23 +30,26 @@ namespace ants
 template <unsigned int Dimension>
 int PermuteFlipImageOrientationAxes( int argc, char * argv[] )
 {
-  typedef   float InputPixelType;
-  typedef   float OutputPixelType;
+  using InputPixelType = float;
+  using OutputPixelType = float;
 
-  typedef itk::Image<InputPixelType,    Dimension> InputImageType;
-  typedef itk::Image<OutputPixelType,   Dimension> OutputImageType;
+  using InputImageType = itk::Image<InputPixelType, Dimension>;
+  using OutputImageType = itk::Image<OutputPixelType, Dimension>;
 
   typename InputImageType::Pointer inputImage = nullptr;
   ReadImage<InputImageType>(inputImage, argv[1]);
 
   // Create a filter
-  typedef OutputImageType ShortImage;
+  using ShortImage = OutputImageType;
   typename itk::PermuteAxesImageFilter<ShortImage>::Pointer permute;
   permute = itk::PermuteAxesImageFilter<ShortImage>::New();
   permute->SetInput( inputImage );
 
-  unsigned int upperFactors[Dimension];
-  unsigned int lowerFactors[Dimension];
+  using FlipType = itk::FlipImageFilter<ShortImage>;
+  typename FlipType::FlipAxesArrayType lowerFactors;
+
+  typename itk::PermuteAxesImageFilter<ShortImage>::PermuteOrderArrayType upperFactors;
+
   for( unsigned int q = 0; q < Dimension; ++q )
     {
     upperFactors[q] = 0;
@@ -109,10 +112,10 @@ int PermuteFlipImageOrientationAxes( int argc, char * argv[] )
       }
     }
 
+
   permute->SetOrder( upperFactors );
   permute->Update();
 
-  typedef itk::FlipImageFilter<ShortImage> FlipType;
   typename FlipType::FlipAxesArrayType flip;
   for( unsigned int i = 0; i < Dimension; i++ )
     {

@@ -148,7 +148,7 @@ iMathGetLargestComponent( typename ImageType::Pointer image,                    
   float volumeelement = 1.0;
   for( unsigned int i = 0;  i < spacing.Size(); i++ )
     {
-    volumeelement *= spacing[i];
+    volumeelement *= static_cast<float>( spacing[i] );
     }
 
   typedef itk::Image<unsigned long, ImageDimension>                          LabelImageType;
@@ -178,7 +178,7 @@ iMathGetLargestComponent( typename ImageType::Pointer image,                    
     {
     relabel->Update();
     }
-  catch( itk::ExceptionObject & excep )
+  catch( itk::ExceptionObject & itkNotUsed(excep) )
     {
     // std::cout << "Relabel: exception caught !" << std::endl;
     // std::cout << excep << std::endl;
@@ -253,7 +253,7 @@ iMathGetLargestComponent( typename ImageType::Pointer image,                    
 
 template <typename ImageType>
 typename ImageType::Pointer
-iMathGrad(typename ImageType::Pointer image, double sigma, bool normalize )      /*3*/ 
+iMathGrad(typename ImageType::Pointer image, double sigma, bool normalize )      /*3*/
 {
 
   typedef itk::GradientMagnitudeRecursiveGaussianImageFilter<ImageType,ImageType> FilterType;
